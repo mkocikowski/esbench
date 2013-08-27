@@ -29,7 +29,7 @@ class USPTOTest(unittest.TestCase):
         self.assertEqual(
             (datetime.date.today().strftime(r'http://storage.googleapis.com/patents/assignments/2013/ad%Y%m%d.zip'),
              datetime.date.today().strftime(r'ad%Y%m%d.zip')), 
-            list(esbench.uspto.urls())[0])
+            (list(esbench.uspto.urls())[0][0], list(esbench.uspto.urls())[0][1][-14:]))
         self.assertLess(len(list(esbench.uspto.urls(400))), 365)
 
 #     def test_download_and_unzip(self): 
@@ -46,9 +46,9 @@ class USPTOTest(unittest.TestCase):
 #                 self.tmp.append(xfn)
 # 
 
-    def test_parse(self):
-        parsed = list(esbench.uspto.parse(ASSIGNMENT))[0]
-        self.assertTrue(isinstance(parsed, dict))
+#     def test_parse(self):
+#         parsed = list(esbench.uspto.parse(ASSIGNMENT))[0]
+#         self.assertTrue(isinstance(parsed, dict))
 
 
     def test_PatentAssignment(self):

@@ -31,7 +31,7 @@ def urls(count=1):
     day = datetime.timedelta(days=1)
     for _ in range(count):
         s = d.strftime(r'ad%Y%m%d.zip')
-        yield ("http://storage.googleapis.com/patents/assignments/2013/%s" % s, s)
+        yield ("http://storage.googleapis.com/patents/assignments/2013/%s" % s, os.path.abspath(s))
         d -= day
         if d < datetime.datetime(2013, 01, 01): 
             break
@@ -76,9 +76,12 @@ def extract(zfn):
 #             os.remove(zfn)
 
 
-def get_assignments(days=1): 
+def get_assignments(days=1, cache=False):
+ 
     for url, fn in urls(days):
+
         for xfn in extract(download(url, fn)):
+
             try: 
                 with open(xfn, "rU") as f:
                     for line in f:
@@ -86,17 +89,22 @@ def get_assignments(days=1):
                             yield line.strip()
                         else:
                             continue
+
             finally:
-#                 os.remove(xfn)
-                pass
+                if not cache:
+                    os.remove(xfn)
+
+        if not cache and os.path.exists(fn):
+            os.remove(fn)
+            
 
 
-def parse(s):
-#     print(s)
-    root = ElementTree.fromstring(s)
-    for node in root.iterfind('.//patent-property'):
-        p = PatentProperty(node)
-        yield p
+# def parse(s):
+# #     print(s)
+#     root = ElementTree.fromstring(s)
+#     for node in root.iterfind('.//patent-property'):
+#         p = PatentProperty(node)
+#         yield p
         
 
 
@@ -275,6 +283,7 @@ def get_args_parser():
     parser.add_argument('-v', '--version', action='version', version=__version__)
     parser.add_argument('-d', '--days', type=int, default=3, help="fetch records for how many days? (default: %(default)s)")
     parser.add_argument('-i', metavar='INDENT', type=int, default=None, help="if set, format JSON output with indent (default: %(default)s)")
+    parser.add_argument('--cache', action='store_true', help="if set, don't delete downloaded data (default: %(default)s)")
     return parser
 
 
@@ -284,7 +293,7 @@ def main():
     args = get_args_parser().parse_args()
 
     try: 
-        for line in get_assignments(args.days):
+        for line in get_assignments(args.days, args.cache):
 #             print(line)
             a = PatentAssignment(line)
             print(json.dumps(a, indent=args.i, sort_keys=True))
