@@ -89,11 +89,17 @@ def parse(s):
         
 
 
-class PatentProperty(dict): 
+class Element(dict):
 
     def __init__(self, root): 
         dict.__init__(self) 
         self.from_xml(root)
+
+    def from_xml(self, root):
+        raise NotImplementedError()
+
+
+class PatentProperty(Element): 
 
     def from_xml(self, root):
     
@@ -119,19 +125,13 @@ class PatentProperty(dict):
                 self['document-ids'].append(DocumentID(docid))
 
 
-class DocumentID(dict):
+class DocumentID(Element):
 
     APPLICATION = 'app'
     PATENT = 'pat'
     PUBLICATION = 'pub'
     
     FIELDS = ['country', 'doc-number', 'kind', 'date', '_type_expected', '_type_inferred']
-
-
-    def __init__(self, root): 
-        dict.__init__(self) 
-        self.from_xml(root)
-
 
     def _type(self):
         idstr = self['doc-number']
