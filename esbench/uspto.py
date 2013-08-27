@@ -7,7 +7,7 @@ import logging
 import argparse
 import sys
 import collections
-# import json
+import json
 from xml.etree import ElementTree
 
 import requests
@@ -74,139 +74,101 @@ def parse(s):
         yield p
         
     
-class PatentProperty(collections.Mapping): 
+class PatentProperty(dict): 
 
-    def __init__(self, root):
-        self.data = {
-            'invention-title': '',
-            'invention-title-language': '', 
-            'document-ids': []
-        }
+    def __init__(self, root): 
+        dict.__init__(self) 
         self.from_xml(root)
-        return
-
-    def __getitem__(self, key): 
-        return self.data[key]
-    
-    def __iter__(self):
-        for k in self.data:
-            yield k
-    
-    def __len__(self):
-        return 3
-    
-    def __str__(self):
-        return str(self.data)
-
-    def __repr__(self):
-        return str(self.data)
 
     def from_xml(self, root):
+    
         i = root.find('invention-title')
         try:
-            self.data['invention-title'] = i.text
-            self.data['invention-title-language'] = i.attrib['lang']
+            self['invention-title'] = i.text
+            self['invention-title-language'] = i.attrib['lang']
         except AttributeError:
-            self.data['invention-title'] = ''
-            self.data['invention-title-language'] = ''
+            self['invention-title'] = ''
+            self['invention-title-language'] = ''
 
+        self['document-ids'] = []
         ids = list(root.iterfind('.//document-id'))
         if len(ids) == 3: 
-            self.data['document-ids'].append(ApplicationNumber(ids[0]))
-            self.data['document-ids'].append(PatentNumber(ids[1]))
-            self.data['document-ids'].append(PublicationNumber(ids[2]))
+            self['document-ids'].append(ApplicationNumber(ids[0]))
+            self['document-ids'].append(PatentNumber(ids[1]))
+            self['document-ids'].append(PublicationNumber(ids[2]))
         elif len(ids) == 2:
-            self.data['document-ids'].append(ApplicationNumber(ids[0]))
-            self.data['document-ids'].append(PublicationNumber(ids[1]))
+            self['document-ids'].append(ApplicationNumber(ids[0]))
+            self['document-ids'].append(PublicationNumber(ids[1]))
         else:
             for docid in ids:
-                self.data['document-ids'].append(DocumentID(docid))
+                self['document-ids'].append(DocumentID(docid))
 
 
-class DocumentID(collections.Mapping):
+class DocumentID(dict):
 
     APPLICATION = 'app'
     PATENT = 'pat'
     PUBLICATION = 'pub'
+    
+    FIELDS = ['country', 'doc-number', 'kind', 'date', '_type_expected', '_type_inferred']
+
 
     def __init__(self, root): 
-        self.data = {
-            'country': '', 
-            'doc-number': '', 
-            'kind': '', 
-            'date': '', 
-            '_type_stated': None, 
-            '_type_inferred': None, 
-        }
+        dict.__init__(self) 
         self.from_xml(root)
-        self.guess_type()
-        return
 
-    def __getitem__(self, key): 
-        return self.data[key]
-    
-    def __iter__(self):
-        for k in self.data:
-            yield k
-    
-    def __len__(self):
-        return 4
 
-    def __str__(self):
-        return str(self.data)
-
-    def __repr__(self):
-        return str(self.data)
-    
-    def guess_type(self):
-        idstr = self.data['doc-number']
+    def _type(self):
+        idstr = self['doc-number']
         if len(idstr) == 7: 
             try: int(idstr, 10)
             except ValueError: return False
-            self.data['_type_inferred'] = DocumentID.PATENT
+            self['_type_inferred'] = DocumentID.PATENT
             return True
         elif len(idstr) == 8: 
             try: int(idstr, 10)
             except ValueError: return False
-            self.data['_type_inferred'] = DocumentID.APPLICATION
+            self['_type_inferred'] = DocumentID.APPLICATION
             return True
         elif len(idstr) in [10, 11]: 
             try: int(idstr, 10)
             except ValueError: return False
-            self.data['_type_inferred'] = DocumentID.PUBLICATION
+            self['_type_inferred'] = DocumentID.PUBLICATION
             return True
         else:
-            self.data['_type_inferred'] = ''
+            self['_type_inferred'] = ''
             return False
 
     
     def from_xml(self, root):
-        for k in self.data:
+        for k in self.FIELDS:
             try: 
-                self.data[k] = root.findtext(k).strip()
-            except AttributeError:
+                text = root.findtext(k)
+                self[k] = text.strip() if text else ''
+            except AttributeError as exc:
                 pass
-
+        self._type()
+        
 
 class ApplicationNumber(DocumentID):
 
-    def __init__(self, root):
-        super(ApplicationNumber, self).__init__(root)
-        self.data['_type_stated'] = DocumentID.APPLICATION
-
+    def from_xml(self, root):
+        super(ApplicationNumber, self).from_xml(root)
+        self['_type_expected'] = DocumentID.APPLICATION
+        
 
 class PatentNumber(DocumentID):
 
-    def __init__(self, root):
-        super(PatentNumber, self).__init__(root)
-        self.data['_type_stated'] = DocumentID.PATENT
+    def from_xml(self, root):
+        super(PatentNumber, self).from_xml(root)
+        self['_type_expected'] = DocumentID.PATENT
 
 
 class PublicationNumber(DocumentID):
 
-    def __init__(self, root):
-        super(PublicationNumber, self).__init__(root)
-        self.data['_type_stated'] = DocumentID.PUBLICATION
+    def from_xml(self, root):
+        super(PublicationNumber, self).from_xml(root)
+        self['_type_expected'] = DocumentID.PUBLICATION
 
 
 def get_args_parser():
@@ -216,8 +178,6 @@ def get_args_parser():
     return parser
 
 
-import copy
-
 def main():
     logging.basicConfig(level=logging.WARNING)
     args = get_args_parser().parse_args()
@@ -225,7 +185,8 @@ def main():
     try: 
         for a in get_assignments(args.days):
             for p in parse(a):
-                print(p)
+                print(json.dumps(p))
+#                 sys.exit(1)
 
     except IOError:
         pass
