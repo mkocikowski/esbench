@@ -7,6 +7,7 @@ import logging
 import argparse
 import sys
 import collections
+# import json
 from xml.etree import ElementTree
 
 import requests
@@ -14,6 +15,7 @@ import requests
 
 __version__ = (0,0,1)
 
+logger = logging.getLogger(__name__)
 
 def urls(count=1):
     d = datetime.datetime.utcnow()
@@ -48,17 +50,21 @@ def extract(zfn):
     
         finally:
             archive.close()
+            os.remove(zfn)
 
 
 def get_assignments(days=1): 
     for url, fn in urls(days):
         for xfn in extract(download(url, fn)):
-            with open(xfn, "rU") as f:
-                for line in f:
-                    if line.startswith("<patent-assignment>"):
-                        yield line.strip()
-                    else:
-                        continue
+            try: 
+                with open(xfn, "rU") as f:
+                    for line in f:
+                        if line.startswith("<patent-assignment>"):
+                            yield line.strip()
+                        else:
+                            continue
+            finally:
+                os.remove(xfn)
 
 
 def parse(s):
@@ -96,8 +102,6 @@ class PatentProperty(collections.Mapping):
         return str(self.data)
 
     def from_xml(self, root):
-#         root = ElementTree.fromstring(xml)
-
         i = root.find('invention-title')
         try:
             self.data['invention-title'] = i.text
@@ -105,24 +109,37 @@ class PatentProperty(collections.Mapping):
         except AttributeError:
             self.data['invention-title'] = ''
             self.data['invention-title-language'] = ''
-            
-        for node in root.iterfind('.//document-id'):
-#             docid = DocumentID(ElementTree.tostring(node))
-            docid = DocumentID(node)
-            self.data['document-ids'].append(docid)
-    
+
+        ids = list(root.iterfind('.//document-id'))
+        if len(ids) == 3: 
+            self.data['document-ids'].append(ApplicationNumber(ids[0]))
+            self.data['document-ids'].append(PatentNumber(ids[1]))
+            self.data['document-ids'].append(PublicationNumber(ids[2]))
+        elif len(ids) == 2:
+            self.data['document-ids'].append(ApplicationNumber(ids[0]))
+            self.data['document-ids'].append(PublicationNumber(ids[1]))
+        else:
+            for docid in ids:
+                self.data['document-ids'].append(DocumentID(docid))
 
 
 class DocumentID(collections.Mapping):
+
+    APPLICATION = 'app'
+    PATENT = 'pat'
+    PUBLICATION = 'pub'
 
     def __init__(self, root): 
         self.data = {
             'country': '', 
             'doc-number': '', 
             'kind': '', 
-            'date': '' 
+            'date': '', 
+            '_type_stated': None, 
+            '_type_inferred': None, 
         }
         self.from_xml(root)
+        self.guess_type()
         return
 
     def __getitem__(self, key): 
@@ -141,15 +158,55 @@ class DocumentID(collections.Mapping):
     def __repr__(self):
         return str(self.data)
     
+    def guess_type(self):
+        idstr = self.data['doc-number']
+        if len(idstr) == 7: 
+            try: int(idstr, 10)
+            except ValueError: return False
+            self.data['_type_inferred'] = DocumentID.PATENT
+            return True
+        elif len(idstr) == 8: 
+            try: int(idstr, 10)
+            except ValueError: return False
+            self.data['_type_inferred'] = DocumentID.APPLICATION
+            return True
+        elif len(idstr) in [10, 11]: 
+            try: int(idstr, 10)
+            except ValueError: return False
+            self.data['_type_inferred'] = DocumentID.PUBLICATION
+            return True
+        else:
+            self.data['_type_inferred'] = ''
+            return False
+
+    
     def from_xml(self, root):
-#         root = ElementTree.fromstring(xml)
         for k in self.data:
             try: 
                 self.data[k] = root.findtext(k).strip()
             except AttributeError:
-                self.data[k] = ''
+                pass
 
 
+class ApplicationNumber(DocumentID):
+
+    def __init__(self, root):
+        super(ApplicationNumber, self).__init__(root)
+        self.data['_type_stated'] = DocumentID.APPLICATION
+
+
+class PatentNumber(DocumentID):
+
+    def __init__(self, root):
+        super(PatentNumber, self).__init__(root)
+        self.data['_type_stated'] = DocumentID.PATENT
+
+
+class PublicationNumber(DocumentID):
+
+    def __init__(self, root):
+        super(PublicationNumber, self).__init__(root)
+        self.data['_type_stated'] = DocumentID.PUBLICATION
 
 
 def get_args_parser():
@@ -158,6 +215,8 @@ def get_args_parser():
     parser.add_argument('-d', '--days', type=int, default=3, help="fetch records for how many days? (default: %(default)s)")
     return parser
 
+
+import copy
 
 def main():
     logging.basicConfig(level=logging.WARNING)
