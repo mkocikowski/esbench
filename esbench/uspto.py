@@ -27,11 +27,16 @@ def urls(count=1):
 
 
 def download(url, fn):
+
+    if os.path.exists(os.path.abspath(fn)): 
+        return os.path.abspath(fn)
+
     response = requests.get(url)
     if response.status_code == 200:
         with open(fn, "w") as f:
             f.write(response.content)
         return os.path.abspath(fn)
+
     else:
         return False
 
@@ -40,17 +45,24 @@ def extract(zfn):
 
     if not zfn or not zfn.endswith(".zip"):
         return
-
-    else: 
+    
+    xfn = os.path.abspath("%s.xml" % (zfn[:-4], ))
+    if os.path.exists(xfn):
+        yield os.path.abspath(xfn)
+        return
+    
+    else:
         try: 
             archive = zipfile.ZipFile(zfn)
             for fn in archive.namelist():
-                archive.extract(fn)
+                if not os.path.exists(os.path.abspath(fn)): 
+                    archive.extract(fn)
                 yield os.path.abspath(fn)
-    
+            return
+
         finally:
             archive.close()
-            os.remove(zfn)
+#             os.remove(zfn)
 
 
 def get_assignments(days=1): 
@@ -64,16 +76,19 @@ def get_assignments(days=1):
                         else:
                             continue
             finally:
-                os.remove(xfn)
+#                 os.remove(xfn)
+                pass
 
 
 def parse(s):
+#     print(s)
     root = ElementTree.fromstring(s)
     for node in root.iterfind('.//patent-property'):
         p = PatentProperty(node)
         yield p
         
-    
+
+
 class PatentProperty(dict): 
 
     def __init__(self, root): 

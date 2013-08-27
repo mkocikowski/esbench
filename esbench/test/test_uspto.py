@@ -43,15 +43,10 @@ class USPTOTest(unittest.TestCase):
 #                 self.tmp.append(xfn)
 # 
 
-#     def test_parse(self):
-# #         parsed = esbench.uspto.parse(ASSIGNMENT)
-# #         print(parsed)
-#         doc_id =  esbench.uspto.USPTODocumentID()
-#         doc_id.from_xml(ASSIGNMENT)        
-
     def test_parse(self):
-        parsed = esbench.uspto.parse(ASSIGNMENT)
-        print(parsed)
+        parsed = list(esbench.uspto.parse(ASSIGNMENT))[0]
+        self.assertTrue(isinstance(parsed, dict))
+        
         
         
 if __name__ == "__main__":
