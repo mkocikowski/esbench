@@ -26,11 +26,14 @@ def format_date(s):
         return ""
 
 
-def urls(count=1):
-#     d = datetime.datetime.utcnow()
+def urls(retro=False, days_2013=1):
+    if retro:
+        for n in range(1, 13):
+            s = "ad20121231-%i.zip" % n
+            yield("http://storage.googleapis.com/patents/retro/2012/%s" % s, os.path.abspath(s))
     d = datetime.datetime(2013, 1, 1)
     day = datetime.timedelta(days=1)
-    for _ in range(count):
+    for _ in range(days_2013):
         s = d.strftime(r'ad%Y%m%d.zip')
         yield ("http://storage.googleapis.com/patents/assignments/2013/%s" % s, os.path.abspath(s))
         d += day
@@ -74,12 +77,11 @@ def extract(zfn):
 
         finally:
             archive.close()
-#             os.remove(zfn)
 
 
-def get_assignments(days=1, cache=False):
+def get_assignments(days=1, retro=False, cache=False):
  
-    for url, fn in urls(days):
+    for url, fn in urls(retro=retro, days_2013=days):
 
         for xfn in extract(download(url, fn)):
 
@@ -99,21 +101,10 @@ def get_assignments(days=1, cache=False):
             os.remove(fn)
             
 
-
-# def parse(s):
-# #     print(s)
-#     root = ElementTree.fromstring(s)
-#     for node in root.iterfind('.//patent-property'):
-#         p = PatentProperty(node)
-#         yield p
-        
-
-
 class PatentAssignmentElement(dict):
 
     def __init__(self, root): 
         dict.__init__(self)
-#         print(type(root)) 
         self.from_xml(root)
         
     def __setitem__(self, key, value):
@@ -286,6 +277,7 @@ def get_args_parser():
     parser.add_argument('-d', '--days', type=int, default=3, help="fetch records for how many days? (default: %(default)s)")
     parser.add_argument('-i', metavar='INDENT', type=int, default=None, help="if set, format JSON output with indent (default: %(default)s)")
     parser.add_argument('--cache', action='store_true', help="if set, don't delete downloaded data (default: %(default)s)")
+    parser.add_argument('--retro', action='store_true', help="if set, download data for 1980-2012 (default: %(default)s)")
     return parser
 
 
@@ -295,15 +287,13 @@ def main():
     args = get_args_parser().parse_args()
 
     try: 
-        for line in get_assignments(args.days, args.cache):
-#             print(line)
+        for line in get_assignments(days=args.days, retro=args.retro, cache=args.cache):
             a = PatentAssignment(line)
             print(json.dumps(a, indent=args.i, sort_keys=True))
-#             print("*********************************************************")
-#             sys.exit(1)
 
     except IOError:
-        pass
+        logger.warning("Exiting with IO error")
+        sys.exit(1)
 
     sys.exit(0)
 
