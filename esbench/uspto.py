@@ -27,13 +27,14 @@ def format_date(s):
 
 
 def urls(count=1):
-    d = datetime.datetime.utcnow()
+#     d = datetime.datetime.utcnow()
+    d = datetime.datetime(2013, 1, 1)
     day = datetime.timedelta(days=1)
     for _ in range(count):
         s = d.strftime(r'ad%Y%m%d.zip')
         yield ("http://storage.googleapis.com/patents/assignments/2013/%s" % s, os.path.abspath(s))
-        d -= day
-        if d < datetime.datetime(2013, 01, 01): 
+        d += day
+        if d > datetime.datetime.utcnow(): 
             break
 
 
@@ -275,6 +276,7 @@ class PatentAssignment(dict):
         for node in self.tree.iterfind('.//patent-property'):
             p = PatentProperty(node)
             self['patent_properties'].append(p)
+        self['patent_properties_count'] = len(self['patent_properties'])
 
 
 def get_args_parser():
