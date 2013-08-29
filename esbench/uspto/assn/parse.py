@@ -152,6 +152,13 @@ class PatentAssignment(dict):
         self['patent_properties_count'] = len(self['patent_properties'])
 
 
+def parse(line):
+    if line.startswith("<patent-assignment>"): 
+        parsed = PatentAssignment(line)
+#         return(json.dumps(parsed, indent=args.i, sort_keys=True))
+        return parsed
+    else:
+        return None
 
 
 def args_parser():
@@ -159,6 +166,7 @@ def args_parser():
     parser = argparse.ArgumentParser(description="esbench USPTO patent assignment parser.")
     parser.add_argument('-v', '--version', action='version', version=__version__)
     parser.add_argument('-i', metavar='INDENT', type=int, default=None, help="if set, format JSON output with indent (default: %(default)s)")
+    parser.add_argument('infile', nargs='?', type=str, default=None, help="if set, read input from that file, ano output to file with same filename but '.json' extension; the input file must end with '.xml' (default: %(default)s)")
     return parser
 
 
@@ -166,11 +174,28 @@ def main():
 
     logging.basicConfig(level=logging.WARNING)
     args = args_parser().parse_args()
+    sort = True if args.i else False
 
     try: 
-        for line in sys.stdin:
-            parsed = PatentAssignment(line)
-            print(json.dumps(parsed, indent=args.i, sort_keys=True))
+        if args.infile: 
+            with open(args.infile, 'rU') as infile: 
+                with open("%s.json" % (args.infile[:-4],), 'w') as outfile: 
+                    for line in infile: 
+                        parsed = parse(line)
+                        if parsed:
+                            s = json.dumps(parsed, indent=args.i, sort_keys=sort)
+                            outfile.write(s)
+                        else:
+                            continue
+        
+        else:
+            for line in sys.stdin:
+                parsed = parse(line)
+                if parsed:
+                    s = json.dumps(parsed, indent=args.i, sort_keys=sort)
+                    print(s)
+                else:
+                    continue
 
     except IOError:
         logger.warning("Exiting with IO error")
