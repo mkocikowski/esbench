@@ -21,7 +21,7 @@ class ParseTest(unittest.TestCase):
         s = json.dumps(ar, indent=None, sort_keys=True)        
         self.assertEqual(s, PARSED)
 
-        
-if __name__ == "__main__":
-    unittest.main()     
-
+#         
+# if __name__ == "__main__":
+#     unittest.main()     
+# 

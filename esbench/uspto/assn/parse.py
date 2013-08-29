@@ -170,15 +170,11 @@ def main():
     try: 
         for line in sys.stdin:
             parsed = PatentAssignment(line)
-#             sys.stderr.write("%i," % len(parsed['patent_properties']))
             print(json.dumps(parsed, indent=args.i, sort_keys=True))
 
     except IOError:
         logger.warning("Exiting with IO error")
         sys.exit(1)
-
-#     finally:
-#         sys.stderr.write("\n")
 
     sys.exit(0)
 

@@ -15,18 +15,28 @@ __version__ = (0, 0, 1)
 logger = logging.getLogger(__name__)
 
 
+# def _retro_backside_urls():
+#     for year in range(2005, 2013): 
+#         for n in range(1, 16):
+#             s = "ad%i1231-%02i.zip" % (year, n)
+#             yield("wget http://storage.googleapis.com/patents/retro/%i/%s" % (year, s))
+# 
+# 
+# def _retro_frontside_urls():
+#     d = datetime.datetime(2004, 1, 1)
+#     day = datetime.timedelta(days=1)
+#     for n in range(365 * 10):
+#         s = d.strftime(r'ad%Y%m%d.zip')
+#         yield ("wget http://storage.googleapis.com/patents/assignments/%i/%s" % (d.year, s))
+#         d += day
 
-def urls(retro=False, offset_2013=0, days_2013=1):
-    if retro:
-        for n in range(1, 13):
-            s = "ad20121231-%02i.zip" % n
-            yield("http://storage.googleapis.com/patents/retro/2012/%s" % s, os.path.abspath(s))
-    d = datetime.datetime(2013, 1, 1)
+
+def urls(count=1):
+    d = datetime.datetime(2009, 1, 1)
     day = datetime.timedelta(days=1)
-    d += day * offset_2013
-    for _ in range(days_2013):
+    for _ in range(count):
         s = d.strftime(r'ad%Y%m%d.zip')
-        yield ("http://storage.googleapis.com/patents/assignments/2013/%s" % s, os.path.abspath(s))
+        yield ("http://storage.googleapis.com/patents/assignments/%i/%s" % (d.year, s), s)
         d += day
         if d > datetime.datetime.utcnow(): 
             break
@@ -55,11 +65,12 @@ def extract(zfn):
     
     xfn = os.path.abspath("%s.xml" % (zfn[:-4], ))
     if os.path.exists(xfn):
-        yield os.path.abspath(xfn)
+        yield xfn
         return
     
     else:
-        try: 
+        try:
+            archive = None 
             archive = zipfile.ZipFile(zfn)
             for fn in archive.namelist():
                 if not os.path.exists(os.path.abspath(fn)): 
@@ -68,13 +79,14 @@ def extract(zfn):
             return
 
         finally:
-            archive.close()
+            if archive: archive.close()
 
 
-def lines(offset=0, days=1, retro=False, cache=False):
+def lines(days=None, cache=False):
 
-    for url, fn in urls(retro=retro, offset_2013=offset, days_2013=days):
-        for xfn in extract(download(url=url, fn=fn)):
+    for url, fn in urls(days):
+        zfn = download(url=url, fn=os.path.abspath(fn))
+        for xfn in extract(zfn):
             try: 
                 with open(xfn, "rU") as f:
                     for line in f:
@@ -94,10 +106,9 @@ def args_parser():
 
     parser = argparse.ArgumentParser(description="esbench USPTO patent assignment downloader.")
     parser.add_argument('-v', '--version', action='version', version=__version__)
-    parser.add_argument('-d', '--days', type=int, default=3, help="fetch records for how many days? (default: %(default)s)")
-    parser.add_argument('-o', '--offset', type=int, default=0, help="start offset (default: %(default)s)")
     parser.add_argument('--cache', action='store_true', help="if set, don't delete downloaded data (default: %(default)s)")
     parser.add_argument('--retro', action='store_true', help="if set, download data for 1980-2012 (default: %(default)s)")
+    parser.add_argument('n', type=int, default=1, help="fetch records for how many days? (default: %(default)s)")
     return parser
 
 
@@ -108,7 +119,7 @@ def main():
 
     try: 
         count = 0
-        for line in lines(offset=args.offset, days=args.days, retro=args.retro, cache=args.cache):
+        for line in lines(days=args.n, cache=args.cache):
             sys.stderr.write("%i," % (len(line)/2**10))
             print(line)
             count += 1
