@@ -1,0 +1,60 @@
+# -*- coding: UTF-8 -*-
+
+import datetime
+import os.path
+import unittest
+import json
+
+from .. import download
+
+ASSIGNMENT = """<patent-assignment><assignment-record><reel-no>29564</reel-no><frame-no>141</frame-no><last-update-date><date>20130104</date></last-update-date><purge-indicator>N</purge-indicator><recorded-date><date>20130103</date></recorded-date><page-count>6</page-count><correspondent><name>PERKINS COIE LLP</name><address-1>P.O. BOX 1247</address-1><address-2>PATENT - SEA</address-2><address-3>SEATTLE, WA 98111-1247</address-3></correspondent><conveyance-text>ASSIGNMENT OF ASSIGNORS INTEREST (SEE DOCUMENT FOR DETAILS).</conveyance-text></assignment-record><patent-assignors><patent-assignor><name>SCHMIDT, PETER</name><execution-date><date>20110812</date></execution-date></patent-assignor><patent-assignor><name>KEMPPAINEN, KURT</name><execution-date><date>20110812</date></execution-date></patent-assignor><patent-assignor><name>BASCHE, RAHN</name><execution-date><date>20110816</date></execution-date></patent-assignor></patent-assignors><patent-assignees><patent-assignee><name>WORDLOCK, INC.</name><address-1>2855 KIFER ROAD, SUITE 245</address-1><city>SANTA CLARA</city><state>CALIFORNIA</state><postcode>95051</postcode></patent-assignee></patent-assignees><patent-properties><patent-property><document-id><country>US</country><doc-number>29400306</doc-number><kind>X0</kind><date>20110825</date></document-id><document-id><country>US</country><doc-number>D662395</doc-number><kind>B1</kind><date>20120626</date></document-id><invention-title lang="en">COMBINATION DISC LOCK</invention-title></patent-property></patent-properties></patent-assignment>"""
+
+class DownloadTest(unittest.TestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        cls.tmp = []
+
+    @classmethod
+    def tearDownClass(cls):
+        for fn in cls.tmp:
+            os.remove(fn)
+
+
+    def test_urls(self):
+    
+        self.assertEqual('http://storage.googleapis.com/patents/assignments/2013/ad20130101.zip', 
+            list(download.urls(offset_2013=0, days_2013=1))[0][0])
+        self.assertEqual('http://storage.googleapis.com/patents/assignments/2013/ad20130102.zip', 
+            list(download.urls(offset_2013=1, days_2013=1))[0][0])
+        self.assertEqual('http://storage.googleapis.com/patents/assignments/2013/ad20130103.zip', 
+            list(download.urls(offset_2013=1, days_2013=2))[1][0])
+
+
+#     def test_download_and_unzip(self): 
+# 
+#         files = []
+#         for url, fn in download.urls():
+#             saved = download.download(url, fn)
+#             if saved: 
+#                 self.assertTrue(os.path.exists(saved))
+#                 files.append(saved)
+#                 self.tmp.append(saved)
+#         
+#         for fn in files:
+#             for xfn in download.extract(fn):
+#                 self.assertTrue(xfn.endswith(".xml"))
+#                 self.tmp.append(xfn)
+
+
+    def test_get_records(self): 
+        
+        lines = list(download.lines(offset=3, days=1))
+        self.assertEqual(378, len(lines))
+        self.assertEqual(ASSIGNMENT, lines[-1])
+
+
+
+if __name__ == "__main__":
+    unittest.main()     
+

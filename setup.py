@@ -16,7 +16,8 @@ setup(
     url = 'https://github.com/mkocikowski/esbench', 
     description = 'Elasticsearch benchmark tool', 
     long_description=ld,
-    packages = ['esbench', 'esbench.test'], 
+    packages = ['esbench', 'esbench.test', 'esbench.uspto', 'esbench.uspto.assn', 'esbench.uspto.assn.test',],
+#     package_dir = {'': 'esbench'}, 
 #     package_data={'': ['README.md',],},
 #     entry_points = {
 #         'console_scripts': [

@@ -31,10 +31,17 @@ class USPTOTest(unittest.TestCase):
             (datetime.datetime(2013, 1, 1).strftime(r'http://storage.googleapis.com/patents/assignments/2013/ad%Y%m%d.zip'),
              datetime.datetime(2013, 1, 1).strftime(r'ad%Y%m%d.zip')), 
             (list(esbench.uspto.urls())[0][0], list(esbench.uspto.urls())[0][1][-14:]))
-        self.assertLess(len(list(esbench.uspto.urls(400))), 365)
+        self.assertLess(len(list(esbench.uspto.urls(days_2013=400))), 365)
         self.assertEqual(12, len(list(esbench.uspto.urls(retro=True, days_2013=False))))
-        self.assertEqual('http://storage.googleapis.com/patents/retro/2012/ad20121231-1.zip', list(esbench.uspto.urls(retro=True, days_2013=False))[0][0])
+        self.assertEqual('http://storage.googleapis.com/patents/retro/2012/ad20121231-01.zip', list(esbench.uspto.urls(retro=True, days_2013=False))[0][0])
         
+
+        self.assertEqual('http://storage.googleapis.com/patents/assignments/2013/ad20130101.zip', 
+            list(esbench.uspto.urls(offset_2013=0, days_2013=1))[0][0])
+        self.assertEqual('http://storage.googleapis.com/patents/assignments/2013/ad20130102.zip', 
+            list(esbench.uspto.urls(offset_2013=1, days_2013=1))[0][0])
+        self.assertEqual('http://storage.googleapis.com/patents/assignments/2013/ad20130103.zip', 
+            list(esbench.uspto.urls(offset_2013=1, days_2013=2))[1][0])
 
 #     def test_download_and_unzip(self): 
 #         for url, fn in esbench.uspto.urls(4):
