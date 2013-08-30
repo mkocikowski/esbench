@@ -6,6 +6,7 @@ import argparse
 import sys
 import json
 import re
+import os.path
 
 from xml.etree import ElementTree
 # from lxml import etree as ElementTreeLXML
@@ -162,13 +163,16 @@ def metadata(filename):
     }
     
     try: 
-        match = re.match(r"^ad(\d{8})(-(\d\d))?.xml$", filename)
+        fn = os.path.basename(filename)
+        match = re.match(r"^ad(\d{8})(-(\d\d))?.xml$", fn)
         date, _, batch = match.groups()
         data['googl_date_published'] = format_date(date) 
         data['googl_type'] = 'backside' if batch else 'frontside' 
-        data['googl_filename'] = filename
+        data['googl_filename'] = fn
     
-    except (AttributeError, TypeError): 
+    except (AttributeError, TypeError) as exc:
+        logger.error(filename) 
+        logger.error(exc)
         pass
     
     return data
@@ -178,7 +182,7 @@ def metadata(filename):
 def parse(line, filename):
 
     if line.startswith("<patent-assignment>"): 
-        parsed = PatentAssignment(line, filename)
+        parsed = PatentAssignment(line, filename=filename)
         return parsed
 
     else:

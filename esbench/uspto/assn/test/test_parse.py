@@ -29,6 +29,7 @@ class ParseTest(unittest.TestCase):
     
     def test_metadata(self): 
         self.assertEqual({'parser_version': '0.0.1', 'googl_date_published': '2010-11-02', 'googl_type': 'frontside', 'googl_filename': 'ad20101102.xml'}, parse.metadata('ad20101102.xml'))
+        self.assertEqual({'parser_version': '0.0.1', 'googl_date_published': '2010-11-02', 'googl_type': 'frontside', 'googl_filename': 'ad20101102.xml'}, parse.metadata('/foo/foo/ad20101102.xml'))
         self.assertEqual({'parser_version': '0.0.1', 'googl_date_published': '2010-11-02', 'googl_type': 'backside', 'googl_filename': 'ad20101102-01.xml'}, parse.metadata('ad20101102-01.xml'))
         self.assertEqual({'parser_version': '0.0.1'}, parse.metadata(''))
         self.assertEqual({'parser_version': '0.0.1'}, parse.metadata(None))
