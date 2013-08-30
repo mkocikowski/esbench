@@ -184,7 +184,8 @@ def main():
                         parsed = parse(line)
                         if parsed:
                             s = json.dumps(parsed, indent=args.i, sort_keys=sort)
-                            outfile.write(s)
+                            outfile.write("%s\n" % s)
+                            sys.stderr.write("%i," % len(parsed['patent_properties']))
                         else:
                             continue
         
@@ -194,8 +195,11 @@ def main():
                 if parsed:
                     s = json.dumps(parsed, indent=args.i, sort_keys=sort)
                     print(s)
+                    sys.stderr.write("%i," % len(parsed['patent_properties']))
                 else:
                     continue
+
+        sys.stderr.write("\n")
 
     except IOError:
         logger.warning("Exiting with IO error")
@@ -207,116 +211,4 @@ def main():
 if __name__ == "__main__":
     main()
 
-
-
-
-
-# 
-# APPLICATION = 'app'
-# PATENT = 'pat'
-# PUBLICATION = 'pub'
-# UNKNOWN = ''
-# 
-# def _type(idstr):
-# 
-#     try: 
-#         if len(idstr) == 7: 
-#             return PATENT
-#         elif len(idstr) == 8: 
-#             int(idstr, 10)
-#             return APPLICATION
-#         elif len(idstr) in [10, 11]: 
-#             int(idstr, 10)
-#             return PUBLICATION
-#         else:
-#             return UNKNOWN
-# 
-#     except ValueError:
-#         return UNKNOWN
-# 
-# 
-# def _date(s):
-#     try: 
-#         dt = datetime.datetime.strptime(s, r"%Y%m%d")
-#         return dt.strftime(r"%Y-%m-%d")
-#     except ValueError: 
-#         return ""
-# 
-# 
-# def _parse_docid(root):
-# 
-#     i = {
-#         'country': root.findtext('./country', default=''), 
-#         'doc_number': root.findtext('./doc-number', default=''), 
-#         'kind': root.findtext('./kind', default=''), 
-#         'date': _date(root.findtext('./date', default='')), 
-#         '_type': '', 
-#     }
-# 
-#     i['type'] = _type(i['doc_number'])
-#     return i
-# 
-# 
-# def _parse_property(root):
-# 
-#     ids = [_parse_docid(node) for node in root.iterfind('./document-id')]
-# 
-#     d = {
-#         'invention_title': root.findtext('./invention-title', default=''), 
-#         'invention_title_language': 'EN', 
-#         'document_ids': ids,
-#     }
-# 
-#     return d
-# 
-# def _parse_entity(root):
-#     
-#     d = {
-#         'date_execution': _date(root.findtext('./execution-date/date', default='')), 
-#         'name': root.findtext('./name', default=''), 
-#         'address': {
-#             'address_1': root.findtext('./address-1', default=''),
-#             'address_2': root.findtext('./address-2', default=''),
-#             'address_3': root.findtext('./address-3', default=''),
-#             'address_4': root.findtext('./address-4', default=''),
-#             'city': root.findtext('./city', default=''),
-#             'state': root.findtext('./state', default=''),
-#             'country_name': root.findtext('./country-name', default=''),
-#             'postcode': root.findtext('./postcode', default=''),
-#         }, 
-#     }
-#     
-#     return d
-#     
-# 
-# def parse(root):
-# 
-#     node = root.find('./assignment-record')
-#     ar = {
-#         'reel_no': node.findtext('./reel-no', default=''), 
-#         'frame_no': node.findtext('./frame-no', default=''), 
-#         'page_count': node.findtext('./page_count', default=''), 
-#         'date_last_update': _date(node.findtext('./last-update-date/date', default='')), 
-#         'date_recorded': _date(node.findtext('./recorded-date/date', default='')), 
-#         'conveyance_text': node.findtext('./conveyance-text', default=''),         
-#         'correspondent': _parse_entity(node.find('./correspondent')), 
-#         '_rf': '', 
-#     }    
-#     ar['_rf'] = "%s_%s" % (ar['reel_no'], ar['frame_no'])
-# 
-#     assors = [_parse_entity(node) for node in root.iterfind('./patent-assignors/patent-assignor')]
-#     assees = [_parse_entity(node) for node in root.iterfind('./patent-assignees/patent-assignee')]
-# 
-#     props = [_parse_property(node) for node in root.iterfind('./patent-properties/patent-property')]
-# 
-#     d = {
-#         'assignment_record': ar, 
-#         'patent_assignors': assors, 
-#         'patent_assignees': assees, 
-#         'patent_properties': props, 
-#     }
-#     
-#     return d
-#     
-#         
-
+# ls -1 /Volumes/MK/pat/frontside/xml/*.xml | xargs -n 1 python parse.py 2> frontside.log
