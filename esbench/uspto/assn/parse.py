@@ -5,12 +5,13 @@ import logging
 import argparse
 import sys
 import json
+import re
 
 from xml.etree import ElementTree
 # from lxml import etree as ElementTreeLXML
 
 
-__version__ = (0, 0, 1)
+__version__ = "0.0.1"
 
 logger = logging.getLogger(__name__)
 
@@ -132,9 +133,11 @@ class AssignmentRecord(PatentAssignmentElement):
 
 class PatentAssignment(dict):
     
-    def __init__(self, xml): 
+    def __init__(self, xml, filename=None): 
         dict.__init__(self)
         self.xml = xml
+        self.filename = filename
+        self['_meta'] = metadata(filename)
         self.tree = ElementTree.fromstring(self.xml)
         self['assignment_record'] = AssignmentRecord(self.tree.find('./assignment-record'))
         self['patent_assignors'] = []
@@ -152,11 +155,32 @@ class PatentAssignment(dict):
         self['patent_properties_count'] = len(self['patent_properties'])
 
 
-def parse(line):
+def metadata(filename): 
+
+    data = {
+        'parser_version': __version__, 
+    }
+    
+    try: 
+        match = re.match(r"^ad(\d{8})(-(\d\d))?.xml$", filename)
+        date, _, batch = match.groups()
+        data['googl_date_published'] = format_date(date) 
+        data['googl_type'] = 'backside' if batch else 'frontside' 
+        data['googl_filename'] = filename
+    
+    except (AttributeError, TypeError): 
+        pass
+    
+    return data
+    
+        
+
+def parse(line, filename):
+
     if line.startswith("<patent-assignment>"): 
-        parsed = PatentAssignment(line)
-#         return(json.dumps(parsed, indent=args.i, sort_keys=True))
+        parsed = PatentAssignment(line, filename)
         return parsed
+
     else:
         return None
 
@@ -181,7 +205,7 @@ def main():
             with open(args.infile, 'rU') as infile: 
                 with open("%s.json" % (args.infile[:-4],), 'w') as outfile: 
                     for line in infile: 
-                        parsed = parse(line)
+                        parsed = parse(line, args.infile)
                         if parsed:
                             s = json.dumps(parsed, indent=args.i, sort_keys=sort)
                             outfile.write("%s\n" % s)
