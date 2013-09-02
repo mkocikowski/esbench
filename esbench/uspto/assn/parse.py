@@ -239,4 +239,4 @@ def main():
 if __name__ == "__main__":
     main()
 
-# ls -1 /Volumes/MK/pat/frontside/xml/*.xml | xargs -n 1 python parse.py 2> frontside.log
+# ls -1 /Volumes/MK/uspto/frontside/xml/*.xml | xargs -n 1 python parse.py 2> /Volumes/MK/uspto/frontside/frontside.log
