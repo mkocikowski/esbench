@@ -24,7 +24,9 @@ class ParseTest(unittest.TestCase):
 
     def test_format_date(self):
         self.assertEqual('2010-01-01', parse.format_date('20100101'))
-        self.assertEqual('', parse.format_date('foo'))
+        self.assertEqual(None, parse.format_date('foo'))
+        self.assertEqual(None, parse.format_date(''))
+        self.assertEqual(None, parse.format_date(None))
     
     
     def test_metadata(self): 

@@ -21,8 +21,8 @@ def format_date(s):
     try: 
         dt = datetime.datetime.strptime(s, r"%Y%m%d")
         return dt.strftime(r"%Y-%m-%d")
-    except ValueError: 
-        return ""
+    except (TypeError, ValueError): 
+        return None
 
 
 class PatentAssignmentElement(dict):
