@@ -11,6 +11,8 @@ import sys
 import urllib2
 # import tempfile
 import gzip
+import itertools
+import string
 
 # import requests
 
@@ -20,11 +22,21 @@ __version__ = "0.0.1"
 logger = logging.getLogger(__name__)
 
 
-URL = "https://s3-us-west-1.amazonaws.com/esbench/assn_%02i.json.gz"
+# URL = "https://s3-us-west-1.amazonaws.com/esbench/assn_%02i.json.gz"
+URL = "https://s3-us-west-1.amazonaws.com/esbench/assn_%s.gz"
 
-def urls(count=1):
-    for n in range(count):
-        yield (URL % (n+1))
+def _aa(count=None): 
+    i = ("".join(i) for i in itertools.product(string.lowercase, repeat=2))
+    if count:
+        i = itertools.islice(i, count) 
+    return i
+
+
+def urls(count=None):
+#     for n in range(count):
+#         yield (URL % (n+1))
+    for s in _aa(count):
+        yield (URL % s)
 
 
 def download(url): 
@@ -81,9 +93,11 @@ def main():
     try: 
         for line in feed(nocache=args.nocache):
             print(line) 
+        
         sys.exit(0)
     
-    except IOError:
+    except IOError as exc:
+        logger.warning(exc)
         pass
     
 
