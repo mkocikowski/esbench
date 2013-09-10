@@ -1,0 +1,31 @@
+{
+	"mtl": {
+		"fields": ["patent_properties.invention_title"], 
+		"from": 0, 
+		"query": {
+			"more_like_this": {
+				"fields": [
+					"patent_properties.invention_title"
+				], 
+				"like_text": "USING V%(variable)s AN IDENTITY-BASED COMMUNICATION LAYER FOR COMPUTING DEVICE COMMUNICATION", 
+				"max_query_terms": 25, 
+				"min_term_freq": 2, 
+				"percent_terms_to_match": 0.3
+			}
+		}, 
+		"size": 20
+	}, 
+
+	"match": {
+		"fields": ["patent_properties.invention_title"], 
+		"from": 0, 
+		"query": {
+			"match": {
+				"patent_properties.invention_title": "computing V%(variable)s device portable"
+			}
+		}, 
+		"size": 20
+	}
+	
+}
+
