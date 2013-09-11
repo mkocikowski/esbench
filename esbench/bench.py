@@ -9,10 +9,11 @@ import json
 import time
 import random
 import traceback
+import datetime
 
-import data
+import data as DATA
 
-__version__ = "0.0.1"
+__version__ = "0.0.2"
 
 logger = logging.getLogger(__name__)
 
@@ -33,7 +34,7 @@ def retry_and_reconnect_on_IOError(method):
                     self.close()
                 return res
             except IOError as (exc):
-                logger.debug("%s (%s) in retry_and_reconnect_on_IOError try: "
+                logger.warning("%s (%s) in retry_and_reconnect_on_IOError try: "
                             "%i, pause: %is" % (type(exc), exc, i, 1))
                 self.close()
         raise # re-raises the last exception, so most likely IOError
@@ -122,22 +123,21 @@ def document_post(conn, index, doctype, docid, data):
     return (status, reason, curl)
 
 
+def index_set_refresh_interval(conn, index, ri): 
+    path = "%s/_settings" % (index, )
+    data = '{"index": {"refresh_interval": "%s"}}' % ri
+    curl = "curl -XPUT localhost:9200/%s -d '%s'" % (path, data)
+    status, reason, data = conn.put(path, data)
+    logger.info("set refresh interval on index %s to %s" % (index, ri))
+
+
 @contextlib.contextmanager
-def index_bulk(conn, index): 
-
-    path = "%s/_settings" % (index, )
-    data = '{"index": {"refresh_interval": "-1"}}'
-    curl = "curl -XPUT localhost:9200/%s -d '%s'" % (path, data)
-    status, reason, data = conn.put(path, data)
-    logger.info("set refresh interval on index %s to %s" % (index, '-1'))
-
-    yield index
-
-    path = "%s/_settings" % (index, )
-    data = '{"index": {"refresh_interval": "1s"}}'
-    curl = "curl -XPUT localhost:9200/%s -d '%s'" % (path, data)
-    status, reason, data = conn.put(path, data)
-    logger.info("set refresh interval on index %s to %s" % (index, '1s'))
+def refresh_interval(conn, index, ri, default="1s"): 
+    try: 
+        index_set_refresh_interval(conn, index, ri)
+        yield
+    finally:
+        index_set_refresh_interval(conn, index, default)
 
 
 def index_optimize(conn, index): 
@@ -172,6 +172,8 @@ def index_segments(conn, index):
     return segments
     
 
+
+
 # def query_mlt(conn, docid): 
 #     path = 'test/doc/0/_mlt'
 #     curl = """curl -XGET 'http://localhost:9200/%s'""" % (path, )
@@ -179,16 +181,25 @@ def index_segments(conn, index):
 #     return (status, reason, data, curl)
 #     
 
+def timestamp():
+    DEFAULT_DATETIME_FORMAT = r'%Y-%m-%dT%H:%M:%SZ'
+    DEFAULT_DATETIME_FORMAT_WITH_MICROSECONDS = r'%Y-%m-%dT%H:%M:%S.%fZ'
+    dt = datetime.datetime.utcnow()
+    s = dt.strftime(DEFAULT_DATETIME_FORMAT_WITH_MICROSECONDS)
+    return s
+    
+
 class Stat(object):
 
     _count = 0
 
-    def __init__(self, index, doctype, queries): 
+    def __init__(self, index, doctype, queries, cli_args): 
         Stat._count += 1
         self.statid = "%03i" % Stat._count
         self.index = index
         self.doctype = doctype
         self.queries = queries
+        self.cli_args = cli_args
 
 
     def _sgn(self, query_name): 
@@ -212,7 +223,7 @@ class Stat(object):
     def record(self, conn): 
 
         groups = [self._sgn(q) for q in self.queries]
-        path = "%s/_stats?clear=true&docs=true&store=true&search=true&merge=true&groups=%s" %\
+        path = "%s/_stats?clear=true&docs=true&store=true&search=true&merge=true&indexing=true&groups=%s" %\
             (self.index, ",".join(groups))
         curl = """curl -XGET 'http://localhost:9200/%s'""" % (path, )
         status, reason, data = conn.get(path)
@@ -221,11 +232,18 @@ class Stat(object):
         #
         data = json.loads(data)
         stat = {
+            'meta': {
+                'statid': int(self.statid), 
+                'ts_bench': BENCH_TS, 
+                'ts_stat': timestamp(), 
+                'cli_args': self.cli_args, 
+            },
             'docs': data['indices'][self.index]['primaries']['docs'], 
-            'search': {k: v for 
+            'search': {k.split("_")[1]: v for 
                 k, v in data['indices'][self.index]['primaries']['search']['groups'].items() if 
                 k.startswith(self.statid)}, 
             'store': data['indices'][self.index]['primaries']['store'], 
+            'indexing': data['indices'][self.index]['primaries']['indexing'], 
             'merges': {k: v for 
                 k, v in data['indices'][self.index]['primaries']['merges'].items()
                 if not k.startswith('current')}, 
@@ -238,7 +256,7 @@ class Stat(object):
 
         # put the stat record into the stats index
         #
-        path = 'stats/doc/%s' % self.statid
+        path = 'stats/doc/%i' % int(self.statid)
         data = json.dumps(stat)
         curl = """curl -XPUT 'http://localhost:9200/%s' -d '%s'""" % (path, data)
         status, reason, data = conn.put(path, data)
@@ -249,8 +267,10 @@ def args_parser():
     parser = argparse.ArgumentParser(description="esbench runner.")
     parser.add_argument('-v', '--version', action='version', version=__version__)
     parser.add_argument('--verbose', action='store_true')
+    parser.add_argument('-r', '--results', action='store_true', help='do not run, analyze existing results; (%(default)s)')
     parser.add_argument('--period', type=int, default=10, help='run tests every n records; (%(default)i)')
-    parser.add_argument('--segments', type=int, default=None, help='max_num_segments for optimize calls; (%(default)s)')
+    parser.add_argument('--segments', type=int, metavar='N', default=None, help='max_num_segments for optimize calls; (%(default)s)')
+    parser.add_argument('--refresh', type=str, metavar='T', default='1s', help="'refresh_interval' for the index, '-1' for none; (%(default)s)")
     parser.add_argument('n', nargs="?", type=int, default=100, help='number of documents; (%(default)i)')
     return parser
 
@@ -267,12 +287,21 @@ QUERIES = json.loads(s)
 
 SEGMENTS = None
 
+BENCH_TS = timestamp()
 
-def stats(conn):
-    stat = Stat('test', 'doc', QUERIES)
+def stats(conn, cli_args):
+    stat = Stat('test', 'doc', QUERIES, cli_args)
     stat.run(conn)
     stat.record(conn)
     
+
+def results(conn): 
+    status, reason, data = conn.get("stats/doc/_count")
+    count = json.loads(data)['count']
+    for i in range(1, count+1): 
+        status, reason, data = conn.get("stats/doc/%i" % i)
+        yield json.loads(data)
+
 
 def main():
 
@@ -286,24 +315,39 @@ def main():
     SEGMENTS = args.segments
 
     with connect() as conn: 
-        for index in ['stats', 'test']: 
-            curl = index_delete(conn, index)[2]; echo(curl)
-            curl = index_create(conn, index)[2]; echo(curl)
-        
-        lines = itertools.islice(data.feed(), args.n)
-        c = 0
+    
+        if args.results:
+            r = [(d['_source']['docs']['count'],
+                  d['_source']['search']['mlt']['query_time_in_millis'], 
+                  d['_source']['search']['match']['query_time_in_millis'], 
+                  d['_source']['segments']['num_search_segments'], 
+                  d['_source']['segments']['t_optimize_in_millis'] / 1000.0)
+                  for d in results(conn)]
+            print("%8s %7s %7s %4s %12s" % ('COUNT', 'MLT', 'MATCH', 'SEG', 'OPTIMIZE'))
+            for t in r:
+                print("%8i %7i %7i %4i %9.2f" % t)
 
-        with index_bulk(conn, 'test'): 
-            for n, line in enumerate(lines): 
-                status, reason, curl = document_post(conn, 'test', 'doc', n, line)
-                echo(curl)
-                if status not in (200, 201):
-                    logger.error("%s (%s) %s\n" % (status, reason, curl, ))
-                    break
-                c += 1
-                if c == args.period: 
-                    stats(conn)
-                    c = 0
+
+        else: 
+            
+            lines = itertools.islice(DATA.feed(), args.n)
+
+            for index in ['stats', 'test']: 
+                curl = index_delete(conn, index)[2]; echo(curl)
+                curl = index_create(conn, index)[2]; echo(curl)
+        
+            with refresh_interval(conn, 'test', args.refresh): 
+                c = 0
+                for n, line in enumerate(lines): 
+                    status, reason, curl = document_post(conn, 'test', 'doc', n, line)
+                    echo(curl)
+                    if status not in (200, 201):
+                        logger.error("%s (%s) %s\n" % (status, reason, curl, ))
+                        break
+                    c += 1
+                    if c == args.period: 
+                        stats(conn, dict(args.__dict__))
+                        c = 0
 
 
 
