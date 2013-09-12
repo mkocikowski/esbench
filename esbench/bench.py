@@ -181,19 +181,12 @@ def index_segments(conn, index):
     return segments
     
 
-def timestamp():
-    DEFAULT_DATETIME_FORMAT = r'%Y-%m-%dT%H:%M:%SZ'
-    DEFAULT_DATETIME_FORMAT_WITH_MICROSECONDS = r'%Y-%m-%dT%H:%M:%S.%fZ'
-    dt = datetime.datetime.utcnow()
-    s = dt.strftime(DEFAULT_DATETIME_FORMAT_WITH_MICROSECONDS)
-    return s
-    
-
 class SearchQuery(object): 
 
-    def __init__(self, name, body): 
+    def __init__(self, name, query): 
+        """name: str, query: dict"""
         self.name = name
-        self.query = body
+        self.query = query
             
     
     def execute(self, conn, index, doctype, stats): 
@@ -263,7 +256,7 @@ class Observation(object):
 
         stat = {
             'meta': {
-                'benchmark_id': str(self.benchmark.benchmark_id), 
+                'benchmark_id': str(self.benchmark), 
                 'observation_id': str(self.observation_id), 
                 'observation_start': self.ts_start,
                 'observation_stop': self.ts_stop, 
@@ -277,12 +270,13 @@ class Observation(object):
 
         stat['stats']['search']['groups'] = {k.split("_")[1]: v for k, v in stat['stats']['search']['groups'].items()}
 
-        print(json.dumps(stat, indent=4, sort_keys=True))
+#         print(json.dumps(stat, indent=4, sort_keys=True))
 
-        path = 'stats/doc/%i' % self.observation_id
+        path = 'stats/obs/%s_%i' % (self.benchmark, self.observation_id)
         data = json.dumps(stat)
         curl = """curl -XPUT 'http://localhost:9200/%s' -d '%s'""" % (path, data)
         status, reason, data = self.conn.put(path, data)
+        logger.info("Recorded observation into: %s" % path)
         return (status, reason, data, curl)
 
 
@@ -294,8 +288,8 @@ class Benchmark(object):
         self.index = index
         self.doctype = doctype
         self.argv = argv
-        self.ts_start = None
-        self.ts_stop = None
+        self.time_start = None
+        self.time_total_ms = None
         self.observations = []
 
         self.queries = []
@@ -318,6 +312,9 @@ class Benchmark(object):
 
     def run(self, conn, lines):
 
+        self.time_start = timestamp()
+        t1 = time.time()
+                
         c = 0    
         for line in lines: 
             status, reason, data, curl = document_post(conn, self.index, self.doctype, line)
@@ -332,11 +329,40 @@ class Benchmark(object):
                         for n in range(1000): 
                             res = query.execute(conn, self.index, self.doctype, [statname])
                 c = 0
+
+        self.time_total = time.time() - t1
+        
     
-    
-    def record(self): 
-        # TODO: record the banchmark
-        return
+    def record(self, conn): 
+
+        stat = {
+            'benchmark_id': self.benchmark_id, 
+            'argv': self.argv.__dict__, 
+            'time_start': self.time_start, 
+            'time_total': "%.2fm" % (self.time_total / 60.0), 
+            'time_total_in_millis': int(self.time_total * 1000), 
+            'queries': {q.name: q.query for q in self.queries}, 
+        }
+        data = json.dumps(stat)
+        
+#         print(json.dumps(stat, indent=4, sort_keys=True))
+
+        path = 'stats/bench/%s' % (self,)
+        curl = """curl -XPUT 'http://localhost:9200/%s' -d '%s'""" % (path, data)
+        status, reason, data = conn.put(path, data)
+        logger.info("Recorded benchmark into: %s" % path)
+        return (status, reason, data, curl)
+
+
+def timestamp(microseconds=False):
+    DEFAULT_DATETIME_FORMAT = r'%Y-%m-%dT%H:%M:%SZ'
+    DEFAULT_DATETIME_FORMAT_WITH_MICROSECONDS = r'%Y-%m-%dT%H:%M:%S.%fZ'
+    dt = datetime.datetime.utcnow()
+    if microseconds: 
+        s = dt.strftime(DEFAULT_DATETIME_FORMAT_WITH_MICROSECONDS)
+    else:
+        s = dt.strftime(DEFAULT_DATETIME_FORMAT)
+    return s
 
 
 def echo(s): 
@@ -382,6 +408,7 @@ def main():
         
         benchmark = Benchmark('b1', 'test', 'doc', args)
         benchmark.run(conn, lines)
+        benchmark.record(conn)
         index_set_refresh_interval(conn, 'test', "1s")
 
 
