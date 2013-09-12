@@ -4,18 +4,10 @@ import os.path
 import logging
 import argparse
 import sys
-# import socket
-
-# import urlparse
-# import httplib
 import urllib2
-# import tempfile
 import gzip
 import itertools
 import string
-
-# import requests
-
 
 __version__ = "0.0.1"
 
@@ -33,8 +25,6 @@ def _aa(count=None):
 
 
 def urls(count=None):
-#     for n in range(count):
-#         yield (URL % (n+1))
     for s in _aa(count):
         yield (URL % s)
 
