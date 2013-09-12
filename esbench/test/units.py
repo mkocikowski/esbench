@@ -5,7 +5,7 @@ import unittest
 
 if __name__ == "__main__":
 
-    suite = unittest.defaultTestLoader.discover(os.path.abspath("../"))
+    suite = unittest.defaultTestLoader.discover(os.path.dirname(__file__), top_level_dir=os.path.abspath("../../"))
     runner = unittest.TextTestRunner(verbosity=2)
     result = runner.run(suite)
 
