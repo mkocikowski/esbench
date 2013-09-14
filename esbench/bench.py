@@ -10,6 +10,7 @@ import time
 import random
 import traceback
 import datetime
+import hashlib
 
 import data as DATA
 
@@ -211,7 +212,8 @@ class Observation(object):
             raise TypeError
 
         Observation._count += 1
-        self.observation_id = Observation._count
+        self.observation_sequence_no = Observation._count
+        self.observation_id = hashlib.md5(str(time.time())).hexdigest()[:8]
         self.benchmark = benchmark
         self.conn = conn
         self.statgroups = set()
@@ -220,14 +222,16 @@ class Observation(object):
 
     
     def __str__(self):
-
         return str(self.observation_id)
 
 
     def __enter__(self):
 
-        logger.info("beginning observation no: %s" % self)
-        self.t_optimize = index_optimize(self.conn, self.benchmark.index)
+        logger.info("beginning observation no: %i" % self.observation_sequence_no)
+        if self.benchmark.argv.no_optimize_calls: 
+            self.t_optimize = 0
+        else:
+            self.t_optimize = index_optimize(self.conn, self.benchmark.index)
         self.ts_start = timestamp()
         return self
 
@@ -236,11 +240,11 @@ class Observation(object):
 
         self.ts_stop = timestamp()
         status, reason, data, curl = self.record()
-        logger.info("finished observation no: %s, stats: %s" % (self, self.statgroups))
+        logger.info("finished observation no: %i, stats: %s" % (self.observation_sequence_no, self.statgroups))
 
 
     def _statsgroupname(self, name): 
-        s = "%03i_%s" % (self.observation_id, name) 
+        s = "%s_%s" % (self.observation_id, name) 
         self.statgroups.add(s)
         return s
 
@@ -256,8 +260,9 @@ class Observation(object):
 
         stat = {
             'meta': {
-                'benchmark_id': str(self.benchmark), 
-                'observation_id': str(self.observation_id), 
+                'benchmark_id': self.benchmark.benchmark_id, 
+                'observation_id': self.observation_id, 
+                'observation_sequence_no': self.observation_sequence_no, 
                 'observation_start': self.ts_start,
                 'observation_stop': self.ts_stop, 
                 'observation_groups': list(self.statgroups),  
@@ -268,11 +273,11 @@ class Observation(object):
         stat['segments']['t_optimize'] = "%.2fs" % self.t_optimize
         stat['segments']['t_optimize_in_millis'] = int(self.t_optimize * 1000)
 
-        stat['stats']['search']['groups'] = {k.split("_")[1]: v for k, v in stat['stats']['search']['groups'].items()}
+        stat['stats']['search']['groups'] = {k.split("_")[-1]: v for k, v in stat['stats']['search']['groups'].items()}
 
 #         print(json.dumps(stat, indent=4, sort_keys=True))
 
-        path = 'stats/obs/%s_%i' % (self.benchmark, self.observation_id)
+        path = 'stats/obs/%s' % (self.observation_id, )
         data = json.dumps(stat)
         curl = """curl -XPUT 'http://localhost:9200/%s' -d '%s'""" % (path, data)
         status, reason, data = self.conn.put(path, data)
@@ -282,9 +287,9 @@ class Observation(object):
 
 class Benchmark(object):
 
-    def __init__(self, benchmark_id, index, doctype, argv):
+    def __init__(self, index, doctype, argv):
 
-        self.benchmark_id = benchmark_id
+        self.benchmark_id = hashlib.md5(str(time.time())).hexdigest()[:8]
         self.index = index
         self.doctype = doctype
         self.argv = argv
@@ -378,6 +383,8 @@ def args_parser():
     parser.add_argument('--period', type=int, default=10, help='run tests every n records; (%(default)i)')
     parser.add_argument('--segments', type=int, metavar='N', default=None, help='max_num_segments for optimize calls; (%(default)s)')
     parser.add_argument('--refresh', type=str, metavar='T', default='1s', help="'refresh_interval' for the index, '-1' for none; (%(default)s)")
+    parser.add_argument('--no-optimize-calls', action='store_true', help="if set, do not optimize before observations")
+    parser.add_argument('--clear-all-results', action='store_true', help="if set, clear all benchmark data from the index")
     parser.add_argument('n', nargs="?", type=int, default=100, help='number of documents; (%(default)i)')
     return parser
 
@@ -400,13 +407,16 @@ def main():
                 
         lines = itertools.islice(DATA.feed(), args.n)
 
-        for index in ['stats', 'test']: 
-            curl = index_delete(conn, index)[2]; echo(curl)
-            curl = index_create(conn, index)[2]; echo(curl)
+        curl = index_delete(conn, 'test')[2]; echo(curl)
+        curl = index_create(conn, 'test')[2]; echo(curl)
     
+        if args.clear_all_results:
+            curl = index_delete(conn, 'stats')[2]; echo(curl)
+            curl = index_create(conn, 'stats')[2]; echo(curl)
+
         index_set_refresh_interval(conn, 'test', args.refresh)
         
-        benchmark = Benchmark('b1', 'test', 'doc', args)
+        benchmark = Benchmark('test', 'doc', args)
         benchmark.run(conn, lines)
         benchmark.record(conn)
         index_set_refresh_interval(conn, 'test', "1s")
