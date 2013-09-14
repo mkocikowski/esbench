@@ -14,6 +14,7 @@ import random
 import traceback
 import datetime
 import hashlib
+import string
 
 import data as DATA
 
@@ -185,6 +186,13 @@ def index_segments(conn, index):
     return segments
     
 
+# timeit.timeit('rands(6)', setup='from __main__ import rands', number=100000)
+def rands(length=6):
+    l = len(string.ascii_letters)-1
+    s = "".join((string.ascii_letters[random.randint(0, l)] for _ in range(length)))
+    return s
+
+
 class SearchQuery(object): 
 
     def __init__(self, name, query): 
@@ -192,17 +200,20 @@ class SearchQuery(object):
         self.name = name
         self.query = query
             
-    
-    def execute(self, conn, index, doctype, stats): 
-    
-        path = '%s/%s/_search' % (index, doctype)
+
+    def prepare(self, index, doctype, stats): 
+
+        self._qp = '%s/%s/_search' % (index, doctype)
         query = dict(self.query)
         query['stats'] = stats if stats else []
-        qs = json.dumps(query)
-        qs = qs % {'variable': random.randint(0, 100000)}
-        curl = """curl -XPOST 'http://localhost:9200/%s' -d '%s'""" % (path, qs)
-        status, reason, data = conn.post(path, qs)
-        return (status, reason, data, curl)
+        self._qs = json.dumps(query)
+        
+    
+    def execute(self, conn): 
+        
+        qs = self._qs % {'variable': rands(6)}
+        status, reason, data = conn.post(self._qp, qs)
+        return (status, reason, data, None)
 
         
 class Observation(object):
@@ -334,8 +345,9 @@ class Benchmark(object):
                 with self.observe(conn) as observation:
                     for query in self.queries: 
                         statname = observation._statsgroupname(query.name)
+                        query.prepare(self.index, self.doctype, [statname])
                         for n in range(1000): 
-                            res = query.execute(conn, self.index, self.doctype, [statname])
+                            res = query.execute(conn)
                 c = 0
 
         self.time_total = time.time() - t1
