@@ -72,15 +72,16 @@ def main():
                 d['_source']['stats']['docs']['count'],
                 d['_source']['stats']['search']['groups']['mlt']['query_time_in_millis'], 
                 d['_source']['stats']['search']['groups']['match']['query_time_in_millis'], 
+                d['_source']['stats']['search']['groups']['matchSorted']['query_time_in_millis'], 
                 d['_source']['segments']['num_search_segments'],
                 seg_max, 
                 d['_source']['segments']['t_optimize_in_millis'] / 1000.0, 
                 ) for d in observations(conn, benchmark['_id'])]
 
             print("\nBenchmark: %s, start: %s, total: %s \n" % (benchmark['_id'], benchmark['_source']['time_start'], benchmark['_source']['time_total'],))
-            print("%8s %7s %7s %8s %12s" % ('COUNT', 'MLT', 'MATCH', 'SEG/MAX', 'OPTIMIZE'))
+            print("%8s %7s %7s %7s %8s %12s" % ('COUNT', 'MLT', 'MATCH', 'MS', 'SEG/MAX', 'OPTIMIZE'))
             for t in r:
-                print("%8i %7i %7i %4i/%s %9.2f" % t)
+                print("%8i %7i %7i %7i %4i/%s %9.2f" % t)
             print("")
         
 
