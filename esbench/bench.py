@@ -333,7 +333,9 @@ class Benchmark(object):
 
         self.time_start = timestamp()
         t1 = time.time()
-                
+
+        period = self.argv.n // self.argv.observations
+        if period < 10: period = 10
         c = 0    
         for line in lines: 
             status, reason, data, curl = document_post(conn, self.index, self.doctype, line)
@@ -341,7 +343,8 @@ class Benchmark(object):
                 logger.error("%s (%s) %s\n" % (status, reason, curl, ))
                 continue
             c += 1
-            if c == self.argv.period: 
+            if c == period: 
+                time.sleep(1)
                 with self.observe(conn) as observation:
                     for query in self.queries: 
                         statname = observation._statsgroupname(query.name)
@@ -360,6 +363,7 @@ class Benchmark(object):
             'argv': self.argv.__dict__, 
             'time_start': self.time_start, 
             'time_total': "%.2fm" % (self.time_total / 60.0), 
+#             'time_total': "%im%is" % (divmod(self.time_total, 60)), 
             'time_total_in_millis': int(self.time_total * 1000), 
             'queries': {q.name: q.query for q in self.queries}, 
         }
@@ -395,7 +399,7 @@ def args_parser():
     parser = argparse.ArgumentParser(description="esbench runner.")
     parser.add_argument('-v', '--version', action='version', version=__version__)
     parser.add_argument('--verbose', action='store_true')
-    parser.add_argument('--period', type=int, default=10, help='run tests every n records; (%(default)i)')
+    parser.add_argument('--observations', type=int, default=10, help='run n observations; (%(default)i)')
     parser.add_argument('--segments', type=int, metavar='N', default=None, help='max_num_segments for optimize calls; (%(default)s)')
     parser.add_argument('--refresh', type=str, metavar='T', default='1s', help="'refresh_interval' for the index, '-1' for none; (%(default)s)")
     parser.add_argument('--no-optimize-calls', action='store_true', help="if set, do not optimize before observations")
