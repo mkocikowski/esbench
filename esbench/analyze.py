@@ -44,7 +44,8 @@ def observations(conn, benchmark_id):
         yield observation
 
 
-def analyze_benchmarks(conn, ids): 
+
+def analyze_benchmarks(conn, ids=None): 
     for benchmark in benchmarks(conn, ids): 
         seg_max = benchmark['_source']['argv']['segments'] if benchmark['_source']['argv']['segments'] else 'inf'
         r = [(
@@ -65,14 +66,13 @@ def analyze_benchmarks(conn, ids):
     return
 
 
-def list_benchmarks(conn): 
-    for benchmark in benchmarks(conn): 
+def list_benchmarks(conn, ids=None): 
+    for benchmark in benchmarks(conn, ids): 
         print("http://localhost:9200/stats/bench/%s %s %s" % (benchmark['_id'], benchmark['_source']['time_start'], benchmark['_source']['argv']))
     return
 
 
-def dump_benchmarks(conn, ids): 
-    print(ids)
+def dump_benchmarks(conn, ids=None): 
     for benchmark in benchmarks(conn, ids): 
         curl = """curl -XPUT 'http://localhost:9200/stats/bench/%s' -d '%s'""" % (benchmark['_id'], json.dumps(benchmark['_source']))
         print(curl)
@@ -80,12 +80,26 @@ def dump_benchmarks(conn, ids):
             curl = """curl -XPUT 'http://localhost:9200/stats/obs/%s' -d '%s'""" % (o['_id'], json.dumps(o['_source']))
             print(curl)
     return
+
+
+def delete_benchmarks(conn, ids=None):
+    for benchmark in benchmarks(conn, ids): 
+        for o in observations(conn, benchmark['_id']): 
+            path = "stats/obs/%s" % (o['_id'], )
+            status, reason, data = conn.delete(path)
+            logger.debug(status)
+        path = "stats/bench/%s" % (benchmark['_id'], )
+        status, reason, data = conn.delete(path)
+        logger.debug(status)
+    return
+    
     
 
 def args_parser():
     parser = argparse.ArgumentParser(description="esbench runner.")
     parser.add_argument('-v', '--version', action='version', version=__version__)
-    parser.add_argument('-c', '--command', choices=['analyze', 'dump', 'list'], default='analyze')
+#     parser.add_argument('-c', '--command', choices=['analyze', 'dump', 'list'], default='analyze')
+    parser.add_argument('command', nargs='?', choices=['analyze', 'dump', 'list', 'delete'], default='analyze')
     parser.add_argument('ids', nargs='*')
     return parser
 
@@ -95,14 +109,18 @@ def main():
     logging.basicConfig(level=logging.DEBUG)
     args = args_parser().parse_args()
 
+#     print(args)
+#     sys.exit(0)
+
     with bench.connect() as conn: 
         if args.command == 'list': 
-            list_benchmarks(conn)
+            list_benchmarks(conn, args.ids)
         elif args.command == 'analyze': 
             analyze_benchmarks(conn, args.ids)
         elif args.command == 'dump':
             dump_benchmarks(conn, args.ids)
-            
+        elif args.command == 'delete': 
+            delete_benchmarks(conn, args.ids)
         
 
 
