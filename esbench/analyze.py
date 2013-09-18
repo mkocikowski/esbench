@@ -24,26 +24,19 @@ conn = None
 DEFAULT_TIMEOUT = 10
 
 
-def benchmarks(conn): 
+def benchmarks(conn, ids=None): 
     path = "stats/bench/_search?sort=time_start:asc&size=100"
     status, reason, data = conn.get(path)
     data = json.loads(data)
     for benchmark in data['hits']['hits']: 
-        yield benchmark
-        
+        if ids and not benchmark['_id'] in ids: 
+            continue
+        else:
+            yield benchmark
+    return
+    
 
 def observations(conn, benchmark_id): 
-
-#     status, reason, data = conn.get("stats/obs/_count")
-#     count = json.loads(data)['count']
-#     for i in range(1, count+1): 
-#         status, reason, data = conn.get("stats/obs/%s_%i" % (benchmark_id, i))
-#         if status == 200: 
-#             print(data)
-#             yield json.loads(data)
-#         else:
-#             continue
-
     path = "stats/obs/_search?q=meta.benchmark_id:%s&sort=meta.observation_start:asc&size=10000" % (benchmark_id, )
     status, reason, data = conn.get(path)
     data = json.loads(data)
@@ -51,11 +44,49 @@ def observations(conn, benchmark_id):
         yield observation
 
 
+def analyze_benchmarks(conn, ids): 
+    for benchmark in benchmarks(conn, ids): 
+        seg_max = benchmark['_source']['argv']['segments'] if benchmark['_source']['argv']['segments'] else 'inf'
+        r = [(
+            d['_source']['stats']['docs']['count'],
+            d['_source']['stats']['search']['groups']['mlt']['query_time_in_millis'], 
+            d['_source']['stats']['search']['groups']['match']['query_time_in_millis'], 
+            d['_source']['stats']['search']['groups']['matchSorted']['query_time_in_millis'], 
+            d['_source']['segments']['num_search_segments'],
+            seg_max,
+            d['_source']['stats']['store']['size'],  
+            d['_source']['segments']['t_optimize_in_millis'] / 1000.0, 
+            ) for d in observations(conn, benchmark['_id'])]
+        print("\nBenchmark: %s, start: %s, total: %s \n" % (benchmark['_id'], benchmark['_source']['time_start'], benchmark['_source']['time_total'],))
+        print("%8s %7s %7s %7s %8s %12s %12s" % ('COUNT', 'MLT', 'MATCH', 'MS', 'SEG/MAX', 'SIZE', 'OPTIMIZE'))
+        for t in r:
+            print("%8i %7i %7i %7i %4i/%s %12s %9.2f" % t)
+        print("")
+    return
 
+
+def list_benchmarks(conn): 
+    for benchmark in benchmarks(conn): 
+        print("http://localhost:9200/stats/bench/%s %s %s" % (benchmark['_id'], benchmark['_source']['time_start'], benchmark['_source']['argv']))
+    return
+
+
+def dump_benchmarks(conn, ids): 
+    print(ids)
+    for benchmark in benchmarks(conn, ids): 
+        curl = """curl -XPUT 'http://localhost:9200/stats/bench/%s' -d '%s'""" % (benchmark['_id'], json.dumps(benchmark['_source']))
+        print(curl)
+        for o in observations(conn, benchmark['_id']): 
+            curl = """curl -XPUT 'http://localhost:9200/stats/obs/%s' -d '%s'""" % (o['_id'], json.dumps(o['_source']))
+            print(curl)
+    return
+    
 
 def args_parser():
     parser = argparse.ArgumentParser(description="esbench runner.")
     parser.add_argument('-v', '--version', action='version', version=__version__)
+    parser.add_argument('-c', '--command', choices=['analyze', 'dump', 'list'], default='analyze')
+    parser.add_argument('ids', nargs='*')
     return parser
 
 
@@ -65,24 +96,13 @@ def main():
     args = args_parser().parse_args()
 
     with bench.connect() as conn: 
-
-        for benchmark in benchmarks(conn): 
-            seg_max = benchmark['_source']['argv']['segments'] if benchmark['_source']['argv']['segments'] else 'inf'
-            r = [(
-                d['_source']['stats']['docs']['count'],
-                d['_source']['stats']['search']['groups']['mlt']['query_time_in_millis'], 
-                d['_source']['stats']['search']['groups']['match']['query_time_in_millis'], 
-                d['_source']['stats']['search']['groups']['matchSorted']['query_time_in_millis'], 
-                d['_source']['segments']['num_search_segments'],
-                seg_max, 
-                d['_source']['segments']['t_optimize_in_millis'] / 1000.0, 
-                ) for d in observations(conn, benchmark['_id'])]
-
-            print("\nBenchmark: %s, start: %s, total: %s \n" % (benchmark['_id'], benchmark['_source']['time_start'], benchmark['_source']['time_total'],))
-            print("%8s %7s %7s %7s %8s %12s" % ('COUNT', 'MLT', 'MATCH', 'MS', 'SEG/MAX', 'OPTIMIZE'))
-            for t in r:
-                print("%8i %7i %7i %7i %4i/%s %9.2f" % t)
-            print("")
+        if args.command == 'list': 
+            list_benchmarks(conn)
+        elif args.command == 'analyze': 
+            analyze_benchmarks(conn, args.ids)
+        elif args.command == 'dump':
+            dump_benchmarks(conn, args.ids)
+            
         
 
 

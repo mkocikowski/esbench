@@ -15,8 +15,8 @@ __version__ = "0.0.1"
 logger = logging.getLogger(__name__)
 
 
-# URL = "https://s3-us-west-1.amazonaws.com/esbench/assn_%02i.json.gz"
-URL = "https://s3-us-west-1.amazonaws.com/esbench/assn_%s.gz"
+# URL = "https://s3-us-west-1.amazonaws.com/esbench/assn_%s.gz"
+URL = "https://s3-us-west-1.amazonaws.com/esbench/appl_%s.gz"
 
 def _aa(count=None): 
     i = ("".join(i) for i in itertools.product(string.lowercase, repeat=2))

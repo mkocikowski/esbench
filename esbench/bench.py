@@ -28,14 +28,14 @@ DEFAULT_TIMEOUT = 10
 
 def retry_and_reconnect_on_IOError(method): 
     def wrapper(self, *args, **kwargs): 
-        for i in [1, 2, 5, 10, 25]:
+        for i in [1, 2, 5, 10, 25, 50, 75, 100]:
             try: 
                 if not self._conn:
                     self.connect(timeout=self.timeout*i)
                 res = method(self, *args, **kwargs)
                 # connections with really long timeouts should not be kept
                 # around, they are an exceptional thing
-                if i >= 5: 
+                if i >= 25: 
                     self.close()
                 return res
             except IOError as (exc):
@@ -312,7 +312,7 @@ class Benchmark(object):
         self.observations = []
 
         self.queries = []
-        with open('queries.json', 'rU') as f:
+        with open('./json/appl.json', 'rU') as f:
             s = f.read()
         for name, body in json.loads(s).items(): 
             self.queries.append(SearchQuery(name, body))
@@ -342,6 +342,8 @@ class Benchmark(object):
             if status not in (200, 201):
                 logger.error("%s (%s) %s\n" % (status, reason, curl, ))
                 continue
+            else:
+                logger.debug(data)
             c += 1
             if c == period: 
                 time.sleep(1)
@@ -352,9 +354,15 @@ class Benchmark(object):
                         for n in range(1000): 
                             res = query.execute(conn)
                 c = 0
+                # update time_total periodically so that if the benchmark gets
+                # interrupted, at least some information is captured. but
+                # don't want to do this on each iteration, to not slow things
+                # down needlessly
+                self.time_total = time.time() - t1
 
         self.time_total = time.time() - t1
         
+
     
     def record(self, conn): 
 
@@ -399,7 +407,7 @@ def args_parser():
     parser = argparse.ArgumentParser(description="esbench runner.")
     parser.add_argument('-v', '--version', action='version', version=__version__)
     parser.add_argument('--verbose', action='store_true')
-    parser.add_argument('--observations', type=int, default=10, help='run n observations; (%(default)i)')
+    parser.add_argument('--observations', metavar='N', type=int, default=10, help='run n observations; (%(default)i)')
     parser.add_argument('--segments', type=int, metavar='N', default=None, help='max_num_segments for optimize calls; (%(default)s)')
     parser.add_argument('--refresh', type=str, metavar='T', default='1s', help="'refresh_interval' for the index, '-1' for none; (%(default)s)")
     parser.add_argument('--no-optimize-calls', action='store_true', help="if set, do not optimize before observations")
@@ -436,9 +444,12 @@ def main():
         index_set_refresh_interval(conn, 'test', args.refresh)
         
         benchmark = Benchmark('test', 'doc', args)
-        benchmark.run(conn, lines)
-        benchmark.record(conn)
-        index_set_refresh_interval(conn, 'test', "1s")
+        try: 
+            benchmark.run(conn, lines)
+        finally:
+            conn.close()
+            benchmark.record(conn)
+            index_set_refresh_interval(conn, 'test', "1s")
 
 
 if __name__ == "__main__":
