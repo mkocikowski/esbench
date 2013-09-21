@@ -446,6 +446,9 @@ def main():
         benchmark = Benchmark('test', 'doc', args)
         try: 
             benchmark.run(conn, lines)
+        except Exception as exc:
+            logger.error(exc)
+            raise
         finally:
             conn.close()
             benchmark.record(conn)

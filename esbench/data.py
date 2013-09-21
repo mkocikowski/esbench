@@ -30,10 +30,18 @@ def urls(count=None):
         yield (URL % s)
 
 
-def download(url): 
-    
+def download(url, tmpd="/tmp"): 
+
+#     
+#     # make the ./tmp directory if needed
+#     tmpd = os.path.abspath("./tmp")
+#     if not os.path.isdir(tmpd): 
+#         os.mkdir(tmpd, 0700)
+        
     fn = os.path.basename(url)
-    fn = os.path.abspath(fn)
+    fn = os.path.abspath(os.path.join(tmpd, fn))
+    
+    # if the file already exists, don't download it again
     if os.path.exists(fn): 
         return fn
     
