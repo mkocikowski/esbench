@@ -18,11 +18,11 @@ setup(
     long_description=ld,
     packages = ['esbench', 'esbench.test'], 
     package_data={'': ['README.md',],},
-#     entry_points = {
-#         'console_scripts': [
-#             'elsec = elsec.client:main', 
-#         ]
-#     }, 
+    entry_points = {
+        'console_scripts': [
+            'esbench = esbench.client:main', 
+        ]
+    }, 
     classifiers = [
         "Development Status :: 3 - Alpha", 
         "Environment :: Console", 

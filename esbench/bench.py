@@ -156,12 +156,12 @@ def index_set_refresh_interval(conn, index, ri):
     return (status, reason, data, curl)
 
 
-def index_optimize(conn, index): 
+def index_optimize(conn, index, nseg=0): 
 
     logger.info("optimizing...")
     t1 = time.time()
-    if SEGMENTS: 
-        path = "%s/_optimize?max_num_segments=%i&refresh=true&flush=true&wait_for_merge=true" % (index, SEGMENTS)
+    if nseg: 
+        path = "%s/_optimize?max_num_segments=%i&refresh=true&flush=true&wait_for_merge=true" % (index, nseg)
     else:
         path = "%s/_optimize?refresh=true&flush=true&wait_for_merge=true" % (index, )
 #     curl = "curl -XPOST localhost:9200/%s" % (path, )
@@ -247,7 +247,7 @@ class Observation(object):
         if self.benchmark.argv.no_optimize_calls: 
             self.t_optimize = 0
         else:
-            self.t_optimize = index_optimize(self.conn, self.benchmark.config['index']['name'])
+            self.t_optimize = index_optimize(self.conn, self.benchmark.config['index']['name'], self.benchmark.argv.segments)
         self.ts_start = timestamp()
         return self
 
@@ -427,10 +427,10 @@ def timestamp(microseconds=False):
     return s
 
 
-def echo(s): 
-    if not VERBOSE:
-        return
-    print(s)
+# def echo(s): 
+#     if not VERBOSE:
+#         return
+#     print(s)
     
 
 def args_parser():
@@ -447,19 +447,19 @@ def args_parser():
     return parser
 
 
-VERBOSE = False
-SEGMENTS = None
+# VERBOSE = False
+# SEGMENTS = None
 
 def main():
 
     logging.basicConfig(level=logging.DEBUG)
     args = args_parser().parse_args()
     
-    global VERBOSE
-    VERBOSE = args.verbose
+#     global VERBOSE
+#     VERBOSE = args.verbose
 
-    global SEGMENTS
-    SEGMENTS = args.segments
+#     global SEGMENTS
+#     SEGMENTS = args.segments
 
     with connect() as conn: 
                     

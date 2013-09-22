@@ -5,6 +5,21 @@ This is not fit for public consumption yet! I'm putting this on github for my
 own convenience, not to share with people yet. The initial release will be
 done in time for the San Francisco Elasticsearch meetup on Spetember 23rd. 
 
+Installation
+------------
+For the current 'stable' release:
+    
+    pip install esbench
+
+For the 'dev' release: 
+
+    pip install https://github.com/mkocikowski/esbench/archive/dev.zip
+
+If you don't want to use pip (which is a nice python package manager /
+installer), you can download the source, cd to the directory which contains
+the 'setup.py' file, and run 'python setup.py install'. But I recommend using
+'pip'.
+
 License
 -------
 
