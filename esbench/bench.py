@@ -1,17 +1,14 @@
 # -*- coding: UTF-8 -*-
 # (c)2013 Mik Kocikowski, MIT License (http://opensource.org/licenses/MIT)
 
-# import urlparse
 import httplib
 import contextlib
 import itertools
 import logging
 import argparse
-# import sys
 import json
 import time
 import random
-# import traceback
 import datetime
 import hashlib
 import string
@@ -22,7 +19,6 @@ __version__ = "0.0.3"
 
 logger = logging.getLogger(__name__)
 
-# conn = None
 DEFAULT_TIMEOUT = 10
 
 
@@ -54,7 +50,7 @@ class Conn(object):
         self.conn = None
     
     def connect(self, timeout=DEFAULT_TIMEOUT): 
-        logger.debug("Attempting HTTPConnection (%s:%i) with timeout: %s", self.host, self.port, timeout)
+#         logger.debug("Attempting HTTPConnection (%s:%i) with timeout: %s", self.host, self.port, timeout)
         self.conn = httplib.HTTPConnection(host=self.host, port=self.port, timeout=timeout)
         self.conn.connect()
     
@@ -115,9 +111,24 @@ def document_post(conn, index, doctype, data):
     return (status, reason, data, curl)
 
 
-def index_create(conn, index, mapping=""): 
-    data = """{"settings": {"index": {"number_of_replicas": 0, "number_of_shards": 1}}}"""
+def index_create(conn, index, mapping=None): 
+    data = {
+        "settings": {
+            "index": {
+                "number_of_replicas": 0, 
+                "number_of_shards": 1, 
+            }
+        }, 
+        "mappings": {
+            "doc": mapping
+        }
+    }
+
+    data = json.dumps(data)
+
+#     data = """{"settings": {"index": {"number_of_replicas": 0, "number_of_shards": 1}}}"""
     curl = """curl 'http://localhost:9200/%s/' -d '%s'""" % (index, data)
+    logger.debug(curl)
     status, reason, data = conn.put(index, data)
     return (status, reason, data, curl)
 
@@ -133,13 +144,6 @@ def index_stats(conn, index, groups):
     path = "%s/_stats?clear=true&docs=true&store=true&search=true&merge=true&indexing=true&groups=%s" % (index, groups)
     curl = """curl -XGET 'http://localhost:9200/%s'""" % (path, )
     status, reason, data = conn.get(path)
-#     data = json.loads(data)
-# 
-# 
-# 
-#     path = '%s/_stats' % index
-#     curl = """curl -XGET 'http://localhost:9200/%s'""" % (path, )
-#     status, reason, data = conn.get(path)
     return (status, reason, data, curl)
 
 
@@ -150,16 +154,6 @@ def index_set_refresh_interval(conn, index, ri):
     status, reason, data = conn.put(path, data)
     logger.info("set refresh interval on index %s to %s", index, ri)
     return (status, reason, data, curl)
-
-
-# @contextlib.contextmanager
-# def refresh_interval(conn, index, ri, default="1s"): 
-#     try: 
-#         index_set_refresh_interval(conn, index, ri)
-#         yield
-#     finally:
-#         index_set_refresh_interval(conn, index, default)
-
 
 
 def index_optimize(conn, index): 
@@ -187,7 +181,6 @@ def index_segments(conn, index):
         "num_search_segments": data['indices'][index]['shards']['0'][0]['num_search_segments'], 
         "num_committed_segments": data['indices'][index]['shards']['0'][0]['num_committed_segments'], 
     }
-#     segments = data['indices'][index]['shards']['0'][0]
     return segments
     
 
@@ -346,8 +339,9 @@ class Benchmark(object):
 
     def prepare(self, conn): 
         index_delete(conn, self.config['index']['name'])
-        index_create(conn, self.config['index']['name'])
-    
+        index_create(conn, self.config['index']['name'], self.config['mapping'])
+        index_set_refresh_interval(conn, self.config['index']['name'], self.argv.refresh)
+
 
     def run(self, conn, lines):
 
@@ -418,6 +412,7 @@ class Benchmark(object):
         curl = """curl -XPUT 'http://localhost:9200/%s' -d '%s'""" % (path, data)
         status, reason, data = conn.put(path, data)
         logger.info("Recorded benchmark into: %s", path)
+        index_set_refresh_interval(conn, self.config['index']['name'], "1s")
         return (status, reason, data, curl)
 
 
@@ -467,12 +462,10 @@ def main():
     SEGMENTS = args.segments
 
     with connect() as conn: 
-                
+                    
         lines = itertools.islice(esbench.data.feed(), args.n)
-
-        index_set_refresh_interval(conn, 'test', args.refresh)
-        
         benchmark = Benchmark(args)
+
         try: 
             benchmark.prepare(conn)
             benchmark.run(conn, lines)
@@ -480,9 +473,7 @@ def main():
             logger.error(exc, exc_info=True)
             raise
         finally:
-            conn.close()
             benchmark.record(conn)
-            index_set_refresh_interval(conn, 'test', "1s")
 
 
 if __name__ == "__main__":

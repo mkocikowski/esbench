@@ -6,7 +6,8 @@
 	}, 
 
 	"mapping": {
-	
+		"_source" : {"enabled" : true },
+		"_size" : {"enabled" : true, "store" : "yes"}
 	},
 
 	"queries": {

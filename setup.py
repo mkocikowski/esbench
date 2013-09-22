@@ -5,12 +5,12 @@
 
 from setuptools import setup
 
-ld = """
+ld = """Scripts for benchmarking Elasticsearch nodes. 
 """
 
 setup(
     name = 'esbench', 
-    version = '0.0.2', 
+    version = '0.0.3', 
     author = 'Mik Kocikowski', 
     author_email = 'mkocikowski@gmail.com', 
     url = 'https://github.com/mkocikowski/esbench', 
@@ -23,17 +23,17 @@ setup(
 #             'elsec = elsec.client:main', 
 #         ]
 #     }, 
-#     classifiers = [
-#         "Development Status :: 5 - Production/Stable", 
-#         "Environment :: Console", 
-#         "Intended Audience :: Developers", 
-#         "Intended Audience :: End Users/Desktop", 
-#         "License :: OSI Approved :: MIT License", 
-#         "Natural Language :: English", 
-#         "Operating System :: POSIX",
-#         "Topic :: Internet :: WWW/HTTP :: Indexing/Search",  
-#         "Topic :: Utilities",
-#     ], 
+    classifiers = [
+        "Development Status :: 3 - Alpha", 
+        "Environment :: Console", 
+        "Intended Audience :: Developers", 
+        "License :: OSI Approved :: MIT License", 
+        "Natural Language :: English", 
+        "Operating System :: POSIX",
+        "Topic :: System :: Benchmark", 
+        "Topic :: Internet :: WWW/HTTP :: Indexing/Search",  
+        "Topic :: Utilities",
+    ], 
     license = 'MIT',
 #     test_suite = "elsec.test.units.suite", 
 )

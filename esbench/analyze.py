@@ -52,7 +52,7 @@ def analyze_benchmarks(conn, ids=None):
             d['_source']['stats']['docs']['count'],
             d['_source']['stats']['search']['groups']['mlt']['query_time_in_millis'], 
             d['_source']['stats']['search']['groups']['match']['query_time_in_millis'], 
-            d['_source']['stats']['search']['groups']['matchSorted']['query_time_in_millis'], 
+            d['_source']['stats']['search']['groups']['match_sorted']['query_time_in_millis'], 
             d['_source']['segments']['num_search_segments'],
             seg_max,
             d['_source']['stats']['store']['size'],  
@@ -86,8 +86,7 @@ def delete_benchmarks(conn, ids=None):
     for benchmark in benchmarks(conn, ids): 
         for o in observations(conn, benchmark['_id']): 
             path = "stats/obs/%s" % (o['_id'], )
-            status, reason, data = conn.delete(path)
-            logger.debug(status)
+            conn.delete(path)
         path = "stats/bench/%s" % (benchmark['_id'], )
         conn.delete(path)
     return
