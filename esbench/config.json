@@ -1,46 +1,59 @@
 {
-	"mlt": {
-		"fields": ["abstract.txt"], 
-		"from": 0, 
-		"query": {
-			"more_like_this": {
-				"fields": [
-					"abstract.txt"
-				], 
-				"like_text": "USING V%(variable)s PROTECTING THE CARTRIDGE FROM WELDING HEAT", 
-				"max_query_terms": 25, 
-				"min_term_freq": 2, 
-				"percent_terms_to_match": 0.3
-			}
-		}, 
-		"size": 20
+
+	"index": {
+		"name": "test", 
+		"doctype": "doc"
 	}, 
 
-	"match": {
-		"fields": ["description.txt"], 
-		"from": 0, 
-		"query": {
-			"match": {
-				"description.txt": "computing V%(variable)s device portable"
-			}
-		}, 
-		"size": 20
-	}, 
+	"mapping": {
 	
-	"matchSorted": {
-		"fields": ["description.txt"], 
-		"from": 0, 
-		"query": {
-			"match": {
-				"description.txt": "computing V%(variable)s device portable"
-			}
-		}, 
-		"size": 20, 
-		"sort": [
-			{"_meta.date_published": "desc"}
-		]
-	}
+	},
 
+	"queries": {
+
+		"mlt": {
+			"fields": ["abstract.txt"], 
+			"from": 0, 
+			"query": {
+				"more_like_this": {
+					"fields": [
+						"abstract.txt"
+					], 
+					"like_text": "USING V%(variable)s PROTECTING THE CARTRIDGE FROM WELDING HEAT", 
+					"max_query_terms": 25, 
+					"min_term_freq": 2, 
+					"percent_terms_to_match": 0.3
+				}
+			}, 
+			"size": 20
+		}, 
+
+		"match": {
+			"fields": ["description.txt"], 
+			"from": 0, 
+			"query": {
+				"match": {
+					"description.txt": "computing V%(variable)s device portable"
+				}
+			}, 
+			"size": 20
+		}, 
+	
+		"match_sorted": {
+			"fields": ["description.txt"], 
+			"from": 0, 
+			"query": {
+				"match": {
+					"description.txt": "computing V%(variable)s device portable"
+				}
+			}, 
+			"size": 20, 
+			"sort": [
+				{"_meta.date_published": "desc"}
+			]
+		}
+	
+	}
 	
 }
 

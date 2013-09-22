@@ -14,7 +14,7 @@ import random
 import traceback
 import datetime
 
-import bench
+import esbench.bench
 
 __version__ = "0.0.2"
 
@@ -68,7 +68,7 @@ def analyze_benchmarks(conn, ids=None):
 
 def list_benchmarks(conn, ids=None): 
     for benchmark in benchmarks(conn, ids): 
-        print("http://localhost:9200/stats/bench/%s %s %s" % (benchmark['_id'], benchmark['_source']['time_start'], benchmark['_source']['argv']))
+        print("http://localhost:9200/stats/bench/%s %s \n%s" % (benchmark['_id'], benchmark['_source']['time_start'], json.dumps(benchmark['_source']['argv'], indent=4)))
     return
 
 
@@ -89,8 +89,7 @@ def delete_benchmarks(conn, ids=None):
             status, reason, data = conn.delete(path)
             logger.debug(status)
         path = "stats/bench/%s" % (benchmark['_id'], )
-        status, reason, data = conn.delete(path)
-        logger.debug(status)
+        conn.delete(path)
     return
     
     
@@ -98,7 +97,6 @@ def delete_benchmarks(conn, ids=None):
 def args_parser():
     parser = argparse.ArgumentParser(description="esbench runner.")
     parser.add_argument('-v', '--version', action='version', version=__version__)
-#     parser.add_argument('-c', '--command', choices=['analyze', 'dump', 'list'], default='analyze')
     parser.add_argument('command', nargs='?', choices=['analyze', 'dump', 'list', 'delete'], default='analyze')
     parser.add_argument('ids', nargs='*')
     return parser
@@ -112,7 +110,7 @@ def main():
 #     print(args)
 #     sys.exit(0)
 
-    with bench.connect() as conn: 
+    with esbench.bench.connect() as conn: 
         if args.command == 'list': 
             list_benchmarks(conn, args.ids)
         elif args.command == 'analyze': 
