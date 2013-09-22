@@ -20,6 +20,17 @@ installer), you can download the source, cd to the directory which contains
 the 'setup.py' file, and run 'python setup.py install'. But I recommend using
 'pip'.
 
+Running
+-------
+With an instance of elasticsearch running on localhost, do: 
+
+	esbench run
+	
+When the bench run has finished, you can review the results with: 
+
+	esbench show
+
+
 License
 -------
 

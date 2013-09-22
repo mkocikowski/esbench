@@ -92,35 +92,35 @@ def delete_benchmarks(conn, ids=None):
     return
     
     
-
-def args_parser():
-    parser = argparse.ArgumentParser(description="esbench runner.")
-    parser.add_argument('-v', '--version', action='version', version=__version__)
-    parser.add_argument('command', nargs='?', choices=['analyze', 'dump', 'list', 'delete'], default='analyze')
-    parser.add_argument('ids', nargs='*')
-    return parser
-
-
-def main():
-
-    logging.basicConfig(level=logging.DEBUG)
-    args = args_parser().parse_args()
-
-#     print(args)
-#     sys.exit(0)
-
-    with esbench.bench.connect() as conn: 
-        if args.command == 'list': 
-            list_benchmarks(conn, args.ids)
-        elif args.command == 'analyze': 
-            analyze_benchmarks(conn, args.ids)
-        elif args.command == 'dump':
-            dump_benchmarks(conn, args.ids)
-        elif args.command == 'delete': 
-            delete_benchmarks(conn, args.ids)
-        
-
-
-if __name__ == "__main__":
-    main()
-
+# 
+# def args_parser():
+#     parser = argparse.ArgumentParser(description="esbench runner.")
+#     parser.add_argument('-v', '--version', action='version', version=__version__)
+#     parser.add_argument('command', nargs='?', choices=['analyze', 'dump', 'list', 'delete'], default='analyze')
+#     parser.add_argument('ids', nargs='*')
+#     return parser
+# 
+# 
+# def main():
+# 
+#     logging.basicConfig(level=logging.DEBUG)
+#     args = args_parser().parse_args()
+# 
+# #     print(args)
+# #     sys.exit(0)
+# 
+#     with esbench.bench.connect() as conn: 
+#         if args.command == 'list': 
+#             list_benchmarks(conn, args.ids)
+#         elif args.command == 'analyze': 
+#             analyze_benchmarks(conn, args.ids)
+#         elif args.command == 'dump':
+#             dump_benchmarks(conn, args.ids)
+#         elif args.command == 'delete': 
+#             delete_benchmarks(conn, args.ids)
+#         
+# 
+# 
+# if __name__ == "__main__":
+#     main()
+# 
