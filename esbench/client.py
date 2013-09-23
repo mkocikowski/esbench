@@ -7,11 +7,9 @@ import esbench.analyze
 import esbench.bench
 
 
-__version__ = "0.0.4"
-
 def args_parser():
     parser = argparse.ArgumentParser(description="Elasticsearch benchmark runner")
-    parser.add_argument('-v', '--version', action='version', version=__version__)
+    parser.add_argument('-v', '--version', action='version', version=esbench.__version__)
 #     parser.add_argument('--verbose', action='store_true')
     subparsers = parser.add_subparsers(dest='command', title='commands')
 
@@ -24,11 +22,12 @@ def args_parser():
     parser_run.add_argument('--config-file-path', metavar='', type=str, default='./config.json', help="path to json config file; (%(default)s)")
     parser_run.add_argument('n', nargs="?", type=int, default=100, help='number of documents; (%(default)i)')
 
-    parser_dump = subparsers.add_parser('show', help='show data from recorded benchmarks')
-    parser_dump.add_argument('ids', nargs='*')
+    parser_show = subparsers.add_parser('show', help='show data from recorded benchmarks')
+    parser_show.add_argument('--sample', metavar='N', type=int, default=1, help='sample every Nth observation; (%(default)i)')
+    parser_show.add_argument('ids', nargs='*')
 
     parser_list = subparsers.add_parser('list', help='list recorded benchmarks')
-    parser_list.add_argument('ids', nargs='*')
+    parser_list.add_argument('ids', nargs='*', help='optional list of benchmark ids, empty list means all; (%(default)s)')
 
     parser_clear = subparsers.add_parser('clear', help='clear recorded benchmarks')
     parser_clear.add_argument('ids', nargs='*')
@@ -70,7 +69,7 @@ def main():
         elif args.command == 'list': 
             esbench.analyze.list_benchmarks(conn, args.ids)
         elif args.command == 'show': 
-            esbench.analyze.analyze_benchmarks(conn, args.ids)
+            esbench.analyze.analyze_benchmarks(conn, ids=args.ids, step=args.sample)
         elif args.command == 'dump':
             esbench.analyze.dump_benchmarks(conn, args.ids)
         elif args.command == 'clear': 

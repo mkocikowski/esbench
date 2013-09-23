@@ -15,7 +15,6 @@ import string
 
 import esbench.data
 
-__version__ = "0.0.3"
 
 logger = logging.getLogger(__name__)
 
@@ -426,9 +425,3 @@ def timestamp(microseconds=False):
         s = dt.strftime(DEFAULT_DATETIME_FORMAT)
     return s
 
-
-# def echo(s): 
-#     if not VERBOSE:
-#         return
-#     print(s)
-    

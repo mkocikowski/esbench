@@ -16,8 +16,6 @@ import datetime
 
 import esbench.bench
 
-__version__ = "0.0.2"
-
 logger = logging.getLogger(__name__)
 
 conn = None
@@ -45,9 +43,10 @@ def observations(conn, benchmark_id):
 
 
 
-def analyze_benchmarks(conn, ids=None): 
+def analyze_benchmarks(conn, ids=None, step=1): 
     for benchmark in benchmarks(conn, ids): 
         seg_max = benchmark['_source']['argv']['segments'] if benchmark['_source']['argv']['segments'] else 'inf'
+        obs_i = itertools.islice(observations(conn, benchmark['_id']), 0, None, step)
         r = [(
             d['_source']['stats']['docs']['count'],
             d['_source']['stats']['search']['groups']['mlt']['query_time_in_millis'], 
@@ -57,7 +56,7 @@ def analyze_benchmarks(conn, ids=None):
             seg_max,
             d['_source']['stats']['store']['size'],  
             d['_source']['segments']['t_optimize_in_millis'] / 1000.0, 
-            ) for d in observations(conn, benchmark['_id'])]
+            ) for d in obs_i]
         print("\nBenchmark: %s, start: %s, total: %s \n" % (benchmark['_id'], benchmark['_source']['time_start'], benchmark['_source']['time_total'],))
         print("%8s %7s %7s %7s %8s %12s %12s" % ('COUNT', 'MLT', 'MATCH', 'MS', 'SEG/MAX', 'SIZE', 'OPTIMIZE'))
         for t in r:
@@ -91,36 +90,3 @@ def delete_benchmarks(conn, ids=None):
         conn.delete(path)
     return
     
-    
-# 
-# def args_parser():
-#     parser = argparse.ArgumentParser(description="esbench runner.")
-#     parser.add_argument('-v', '--version', action='version', version=__version__)
-#     parser.add_argument('command', nargs='?', choices=['analyze', 'dump', 'list', 'delete'], default='analyze')
-#     parser.add_argument('ids', nargs='*')
-#     return parser
-# 
-# 
-# def main():
-# 
-#     logging.basicConfig(level=logging.DEBUG)
-#     args = args_parser().parse_args()
-# 
-# #     print(args)
-# #     sys.exit(0)
-# 
-#     with esbench.bench.connect() as conn: 
-#         if args.command == 'list': 
-#             list_benchmarks(conn, args.ids)
-#         elif args.command == 'analyze': 
-#             analyze_benchmarks(conn, args.ids)
-#         elif args.command == 'dump':
-#             dump_benchmarks(conn, args.ids)
-#         elif args.command == 'delete': 
-#             delete_benchmarks(conn, args.ids)
-#         
-# 
-# 
-# if __name__ == "__main__":
-#     main()
-# 
