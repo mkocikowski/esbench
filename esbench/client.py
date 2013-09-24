@@ -40,6 +40,7 @@ def args_parser():
     subparsers = parser.add_subparsers(dest='command', title='commands')
 
     parser_run = subparsers.add_parser('run', help='run a benchmark')
+    parser_run.add_argument('-v', '--verbose', action='store_true')
     parser_run.add_argument('--observations', metavar='N', type=int, default=10, help='run n observations; (%(default)i)')
     parser_run.add_argument('--segments', type=int, metavar='N', default=None, help='max_num_segments for optimize calls; (%(default)s)')
     parser_run.add_argument('--refresh', type=str, metavar='T', default='1s', help="'refresh_interval' for the index, '-1' for none; (%(default)s)")
@@ -49,16 +50,20 @@ def args_parser():
     parser_run.add_argument('n', nargs="?", type=int, default=100, help='number of documents; (%(default)i)')
 
     parser_show = subparsers.add_parser('show', help='show data from recorded benchmarks')
+    parser_show.add_argument('-v', '--verbose', action='store_true')
     parser_show.add_argument('--sample', metavar='N', type=int, default=1, help='sample every Nth observation; (%(default)i)')
     parser_show.add_argument('ids', nargs='*')
 
     parser_list = subparsers.add_parser('list', help='list recorded benchmarks')
+    parser_list.add_argument('-v', '--verbose', action='store_true')
     parser_list.add_argument('ids', nargs='*', help='optional list of benchmark ids, empty list means all; (%(default)s)')
 
     parser_clear = subparsers.add_parser('clear', help='clear recorded benchmarks')
+    parser_clear.add_argument('-v', '--verbose', action='store_true')
     parser_clear.add_argument('ids', nargs='*')
 
     parser_dump = subparsers.add_parser('dump', help='curl dump recorded benchmarks')
+    parser_dump.add_argument('-v', '--verbose', action='store_true')
     parser_dump.add_argument('ids', nargs='*')
 
     return parser

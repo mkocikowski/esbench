@@ -43,25 +43,21 @@ def observations(conn, benchmark_id):
         yield observation
 
 
-
 def analyze_benchmarks(conn, ids=None, step=1): 
     for benchmark in benchmarks(conn, ids): 
         seg_max = benchmark['_source']['argv']['segments'] if benchmark['_source']['argv']['segments'] else 'inf'
         obs_i = itertools.islice(observations(conn, benchmark['_id']), 0, None, step)
         r = [(
             d['_source']['stats']['docs']['count'],
-            d['_source']['stats']['search']['groups']['mlt']['query_time_in_millis'], 
-            d['_source']['stats']['search']['groups']['match']['query_time_in_millis'], 
-            d['_source']['stats']['search']['groups']['match_sorted']['query_time_in_millis'], 
+            " ".join(["%s %7s/%-7s" % (k, v['query_time_in_millis'], v['fetch_time_in_millis']) for k, v in sorted(d['_source']['stats']['search']['groups'].items())]), 
             d['_source']['segments']['num_search_segments'],
             seg_max,
             d['_source']['stats']['store']['size'],  
             d['_source']['segments']['t_optimize_in_millis'] / 1000.0, 
             ) for d in obs_i]
         print("\nBenchmark: %s, start: %s, total: %s \n" % (benchmark['_id'], benchmark['_source']['time_start'], benchmark['_source']['time_total'],))
-        print("%8s %7s %7s %7s %8s %12s %12s" % ('COUNT', 'MLT', 'MATCH', 'MS', 'SEG/MAX', 'SIZE', 'OPTIMIZE'))
         for t in r:
-            print("%8i %7i %7i %7i %4i/%s %12s %9.2f" % t)
+            print("N: %-6i %s SEG/MAX: %3i/%s SIZE: %8s OPT: %6.2f" % t)
         print("")
     return
 
