@@ -1,5 +1,6 @@
 # -*- coding: UTF-8 -*-
 # (c)2013 Mik Kocikowski, MIT License (http://opensource.org/licenses/MIT)
+# https://github.com/mkocikowski/esbench
 
 import os.path
 import logging
@@ -10,10 +11,8 @@ import gzip
 import itertools
 import string
 
-__version__ = "0.0.1"
 
 logger = logging.getLogger(__name__)
-
 
 # URL = "https://s3-us-west-1.amazonaws.com/esbench/assn_%s.gz"
 URL = "https://s3-us-west-1.amazonaws.com/esbench/appl_%s.gz"

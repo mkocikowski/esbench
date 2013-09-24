@@ -1,4 +1,7 @@
-# -*- coding: utf-8 -*-
+# -*- coding: UTF-8 -*-
+# (c)2013 Mik Kocikowski, MIT License (http://opensource.org/licenses/MIT)
+# https://github.com/mkocikowski/esbench
+
 
 # python setup.py -r http://testpypi.python.org/pypi register
 # python setup.py sdist upload -r http://pypi.python.org/pypi
