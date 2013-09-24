@@ -158,7 +158,7 @@ def index_set_refresh_interval(conn, index, ri):
 
 def index_optimize(conn, index, nseg=0): 
 
-    logger.info("optimizing...")
+#     logger.info("optimizing...")
     t1 = time.time()
     if nseg: 
         path = "%s/_optimize?max_num_segments=%i&refresh=true&flush=true&wait_for_merge=true" % (index, nseg)
@@ -185,7 +185,7 @@ def index_segments(conn, index):
     
 
 
-# timeit.timeit('rands(6)', setup='from __main__ import rands', number=100000)
+# timeit.timeit('rands(6)', setup='from __main__ import rands', number=1000)
 def rands(length=6):
     l = len(string.ascii_letters)-1
     s = "".join((string.ascii_letters[random.randint(0, l)] for _ in range(length)))
@@ -235,7 +235,7 @@ class Observation(object):
         self.ts_start = None
         self.ts_stop = None
         self.t_optimize = None
-
+        self._t1 = None
     
     def __str__(self):
         return str(self.observation_id)
@@ -249,6 +249,7 @@ class Observation(object):
         else:
             self.t_optimize = index_optimize(self.conn, self.benchmark.config['index']['name'], self.benchmark.argv.segments)
         self.ts_start = timestamp()
+        self._t1 = time.time()
         return self
 
     
@@ -256,7 +257,7 @@ class Observation(object):
 
         self.ts_stop = timestamp()
         self.record()
-        logger.info("finished observation no: %i, stats: %s", self.observation_sequence_no, self.stats_group_names)
+        logger.info("finished observation no: %i, id: %s, time: %.3f", self.observation_sequence_no, self.observation_id, time.time()-self._t1)
 
 
     def record(self): 
@@ -297,7 +298,7 @@ class Observation(object):
         data = json.dumps(stat)
         curl = """curl -XPUT 'http://localhost:9200/%s' -d '%s'""" % (path, data)
         status, reason, data = self.conn.put(path, data)
-        logger.info("Recorded observation into: %s", path)
+#         logger.info("recorded observation into: %s", path)
         return (status, reason, data, curl)
 
 
@@ -380,8 +381,10 @@ class Benchmark(object):
                         # serializing into json each time
                         #
                         query.prepare(self.config['index']['name'], self.config['index']['doctype'], [stats_group_name])
+                        tq1 = time.time()
                         for _ in range(1000): 
                             query.execute(conn)
+                        logger.debug("query: %s executed %i times, time: %.3f", query.name, 1000, time.time()-tq1)
                 c = 0
                 # update time_total periodically so that if the benchmark gets
                 # interrupted, at least some information is captured. but
@@ -411,7 +414,7 @@ class Benchmark(object):
         path = 'stats/bench/%s' % (self,)
         curl = """curl -XPUT 'http://localhost:9200/%s' -d '%s'""" % (path, data)
         status, reason, data = conn.put(path, data)
-        logger.info("Recorded benchmark into: %s", path)
+        logger.info("recorded benchmark into: %s", path)
         index_set_refresh_interval(conn, self.config['index']['name'], "1s")
         return (status, reason, data, curl)
 

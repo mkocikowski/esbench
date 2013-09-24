@@ -11,6 +11,7 @@ import gzip
 import itertools
 import string
 
+import esbench
 
 logger = logging.getLogger(__name__)
 
@@ -78,7 +79,7 @@ def feed(nocache=False):
 
 def args_parser():
     parser = argparse.ArgumentParser(description="esbench USPTO patent assignment downloader.")
-    parser.add_argument('-v', '--version', action='version', version=__version__)
+    parser.add_argument('-v', '--version', action='version', version=esbench.__version__)
     parser.add_argument('--nocache', action='store_true', help="if set, delete downloaded data (default: %(default)s)")
     return parser
 
