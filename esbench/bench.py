@@ -111,23 +111,23 @@ def document_post(conn, index, doctype, data):
     return (status, reason, data, curl)
 
 
-def index_create(conn, index, mapping=None): 
-    data = {
-        "settings": {
-            "index": {
-                "number_of_replicas": 0, 
-                "number_of_shards": 1, 
-            }
-        }, 
-        "mappings": {
-            "doc": mapping
-        }
-    }
+def index_create(conn, index, config=None): 
+#     data = {
+#         "settings": {
+#             "index": {
+#                 "number_of_replicas": 0, 
+#                 "number_of_shards": 1, 
+#             }
+#         }, 
+#         "mappings": {
+#             "doc": mapping
+#         }
+#     }
 
-    data = json.dumps(data)
+    data = json.dumps(config)
 
 #     data = """{"settings": {"index": {"number_of_replicas": 0, "number_of_shards": 1}}}"""
-    curl = """curl 'http://localhost:9200/%s/' -d '%s'""" % (index, data)
+    curl = """curl -XPUT 'http://localhost:9200/%s/' -d '%s'""" % (index, data)
     logger.debug(curl)
     status, reason, data = conn.put(index, data)
     return (status, reason, data, curl)
@@ -247,7 +247,7 @@ class Observation(object):
         if self.benchmark.argv.no_optimize_calls: 
             self.t_optimize = 0
         else:
-            self.t_optimize = index_optimize(self.conn, self.benchmark.config['index']['name'], self.benchmark.argv.segments)
+            self.t_optimize = index_optimize(self.conn, self.benchmark.config['name_index'], self.benchmark.argv.segments)
         self.ts_start = timestamp()
         self._t1 = time.time()
         return self
@@ -262,7 +262,7 @@ class Observation(object):
 
     def record(self): 
 
-        index = self.benchmark.config['index']['name']
+        index = self.benchmark.config['name_index']
         # we need to specifically ask for the stats groups we want, by name.
         # this if why stats groups are recorded at the time query is prepared.
         groups = ",".join(self.stats_group_names) if self.stats_group_names else ""
@@ -339,9 +339,9 @@ class Benchmark(object):
 
 
     def prepare(self, conn): 
-        index_delete(conn, self.config['index']['name'])
-        index_create(conn, self.config['index']['name'], self.config['mapping'])
-        index_set_refresh_interval(conn, self.config['index']['name'], self.argv.refresh)
+        index_delete(conn, self.config['name_index'])
+        index_create(conn, self.config['name_index'], self.config['index'])
+        index_set_refresh_interval(conn, self.config['name_index'], self.argv.refresh)
 
 
     def run(self, conn, lines):
@@ -354,7 +354,7 @@ class Benchmark(object):
             period = 10
         c = 0    
         for line in lines: 
-            status, reason, data, curl = document_post(conn, self.config['index']['name'], self.config['index']['doctype'], line)
+            status, reason, data, curl = document_post(conn, self.config['name_index'], self.config['name_doctype'], line)
             if status not in (200, 201):
                 logger.error("%s (%s) %s\n", status, reason, curl)
                 continue
@@ -380,7 +380,7 @@ class Benchmark(object):
                         # query.execute() will not incur the penalty of
                         # serializing into json each time
                         #
-                        query.prepare(self.config['index']['name'], self.config['index']['doctype'], [stats_group_name])
+                        query.prepare(self.config['name_index'], self.config['name_doctype'], [stats_group_name])
                         tq1 = time.time()
                         for _ in range(1000): 
                             query.execute(conn)
@@ -415,7 +415,7 @@ class Benchmark(object):
         curl = """curl -XPUT 'http://localhost:9200/%s' -d '%s'""" % (path, data)
         status, reason, data = conn.put(path, data)
         logger.info("recorded benchmark into: %s", path)
-        index_set_refresh_interval(conn, self.config['index']['name'], "1s")
+        index_set_refresh_interval(conn, self.config['name_index'], "1s")
         return (status, reason, data, curl)
 
 

@@ -1,13 +1,21 @@
 {
 
-	"index": {
-		"name": "test", 
-		"doctype": "doc"
-	}, 
+	"name_index": "test",
+	"name_doctype": "doc",
 
-	"mapping": {
-		"_source" : {"enabled" : true },
-		"_size" : {"enabled" : true, "store" : "yes"}
+	"index": {
+	    "settings" : {
+			"index" : {
+				"number_of_shards" : 1,
+				"number_of_replicas" : 0
+			}
+		}, 
+		"mappings": {
+			"doc": {
+				"_source" : {"enabled" : true },
+				"_size" : {"enabled" : true, "store" : "yes"}
+			}
+		}
 	},
 
 	"queries": {
