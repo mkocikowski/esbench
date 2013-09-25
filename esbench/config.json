@@ -31,12 +31,12 @@
 	"queries": {
 
 		"mlt": {
-			"fields": ["abstract.txt"], 
+			"fields": ["description.txt"], 
 			"from": 0, 
 			"query": {
 				"more_like_this": {
 					"fields": [
-						"abstract.txt"
+						"description.txt"
 					], 
 					"like_text": "USING V%(variable)s PROTECTING THE CARTRIDGE FROM WELDING HEAT", 
 					"max_query_terms": 25, 
@@ -44,7 +44,7 @@
 					"percent_terms_to_match": 0.3
 				}
 			}, 
-			"size": 5
+			"size": 10
 		}, 
 
 		"match": {
@@ -55,7 +55,7 @@
 					"description.txt": "computing V%(variable)s device portable"
 				}
 			}, 
-			"size": 5
+			"size": 10
 		}, 
 
 		"match_abs": {
@@ -66,7 +66,7 @@
 					"description.txt": "computing V%(variable)s device portable"
 				}
 			}, 
-			"size": 5
+			"size": 10
 		}, 
 	
 		"match_srt": {
@@ -77,7 +77,7 @@
 					"description.txt": "computing V%(variable)s device portable"
 				}
 			}, 
-			"size": 5, 
+			"size": 10, 
 			"sort": [
 				{"_meta.date_published": "desc"}
 			]

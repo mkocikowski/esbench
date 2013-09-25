@@ -49,6 +49,12 @@ def args_parser():
     parser_run.add_argument('--data', metavar='PATH', type=str, action='store', default=None, help="read data from PATH; set to /dev/stdin to read from stdin. Set this only if you want to provide your own data, by default US Patent Application data will be used; (%(default)s)")
     parser_run.add_argument('n', nargs="?", type=int, default=100, help='number of documents; (%(default)i)')
 
+    parser_observe = subparsers.add_parser('observe', help='run an observation (no data loading)')
+    parser_observe.set_defaults(no_optimize_calls=True, segments=None)
+    parser_observe.add_argument('-v', '--verbose', action='store_true')
+    parser_observe.add_argument('--config-file-path', metavar='', type=str, default='./config.json', help="path to json config file; (%(default)s)")
+    parser_observe.add_argument('n', nargs="?", type=int, default=1, help='number of observations; (%(default)i)')
+
     parser_show = subparsers.add_parser('show', help='show data from recorded benchmarks')
     parser_show.add_argument('-v', '--verbose', action='store_true')
     parser_show.add_argument('--sample', metavar='N', type=int, default=1, help='sample every Nth observation; (%(default)i)')
@@ -89,6 +95,12 @@ def main():
                 raise
             finally:
                 benchmark.record(conn)
+
+        elif args.command == 'observe': 
+            benchmark = esbench.bench.Benchmark(args)
+            for _ in range(args.n):
+                benchmark.observe(conn)
+            benchmark.record(conn)            
 
 #         elif args.command == 'list': 
 #             esbench.analyze.list_benchmarks(conn, args.ids)

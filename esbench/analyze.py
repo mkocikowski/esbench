@@ -49,7 +49,7 @@ def analyze_benchmarks(conn, ids=None, step=1):
         obs_i = itertools.islice(observations(conn, benchmark['_id']), 0, None, step)
         r = [(
             d['_source']['stats']['docs']['count'],
-            " ".join(["%s (q/f) %7s/%-7s" % (k, v['query_time_in_millis'], v['fetch_time_in_millis']) for k, v in sorted(d['_source']['stats']['search']['groups'].items())]), 
+            " ".join(["%s:%6sq%6sf%6sc" % (k, v['query_time_in_millis'], v['fetch_time_in_millis'], v['client_time_in_millis']) for k, v in sorted(d['_source']['stats']['search']['groups'].items())]), 
             d['_source']['segments']['num_search_segments'],
             seg_max,
             d['_source']['stats']['store']['size'],  

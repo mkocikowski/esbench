@@ -232,6 +232,7 @@ class Observation(object):
         self.benchmark = benchmark
         self.conn = conn
         self.stats_group_names = set()
+        self.stats_group_times = {}
         self.ts_start = None
         self.ts_stop = None
         self.t_optimize = None
@@ -257,7 +258,7 @@ class Observation(object):
 
         self.ts_stop = timestamp()
         self.record()
-        logger.info("finished observation no: %i, id: %s, time: %.3f", self.observation_sequence_no, self.observation_id, time.time()-self._t1)
+        logger.info("finished observation no: %i, id: %s, time: %.3f", self.observation_sequence_no, self.observation_id, time.time() - self._t1)
 
 
     def record(self): 
@@ -292,12 +293,18 @@ class Observation(object):
             k, v in stat['stats']['search']['groups'].items()
         }
 
+        for k, v in self.stats_group_times.items(): 
+            stat['stats']['search']['groups'][k]['client_time'] = "%.2fs" % (v, )
+            stat['stats']['search']['groups'][k]['client_time_in_millis'] = int(v * 1000.0)
+
 #         print(json.dumps(stat, indent=4, sort_keys=True))
 
         path = 'stats/obs/%s' % (self.observation_id, )
         data = json.dumps(stat)
         curl = """curl -XPUT 'http://localhost:9200/%s' -d '%s'""" % (path, data)
         status, reason, data = self.conn.put(path, data)
+        if status not in [200, 201]: 
+            logger.error("%s, %s, %s", status, reason, data)
 #         logger.info("recorded observation into: %s", path)
         return (status, reason, data, curl)
 
@@ -330,12 +337,31 @@ class Benchmark(object):
 
     def observe(self, conn): 
 
-        observation = Observation(self, conn)
-        self.observations.append(observation)
-        # Observation class implements the context manager protocol, so here
-        # we are returning an observation object, which will be used in the
-        # 'with' clause of the benchmark
-        return observation
+        with Observation(self, conn) as observation:
+            self.observations.append(observation)
+            for query in self.queries: 
+                stats_group_name = "%s_%s" % (observation.observation_id, query.name)
+                # so we need to not only name the stats group
+                # explicitly in the query to make sure it gets
+                # recorded, but then when it is time to look up the
+                # stats, we need to request that stats group by name -
+                # so this is why a given observation maintains a list
+                # of its stats group names. 
+                #
+                observation.stats_group_names.add(stats_group_name)
+                # call to query.prepare() results in the query being
+                # serialized into json with the proper stats group
+                # name etc, basically so that the recurring calls to
+                # query.execute() will not incur the penalty of
+                # serializing into json each time
+                #
+                query.prepare(self.config['name_index'], self.config['name_doctype'], [stats_group_name])
+                tq1 = time.time()
+                for _ in range(1000): 
+                    query.execute(conn)
+                tqd = time.time() - tq1
+                observation.stats_group_times[query.name] = tqd
+                logger.debug("query: %s executed %i times, time: %.3f", query.name, 1000, tqd)
 
 
     def prepare(self, conn): 
@@ -352,7 +378,7 @@ class Benchmark(object):
         period = self.argv.n // self.argv.observations
         if period < 10: 
             period = 10
-        c = 0    
+        c = 0 
         for line in lines: 
             status, reason, data, curl = document_post(conn, self.config['name_index'], self.config['name_doctype'], line)
             if status not in (200, 201):
@@ -363,28 +389,7 @@ class Benchmark(object):
             c += 1
             if c == period: 
                 time.sleep(1)
-                with self.observe(conn) as observation:
-                    for query in self.queries: 
-                        stats_group_name = "%s_%s" % (observation.observation_id, query.name)
-                        # so we need to not only name the stats group
-                        # explicitly in the query to make sure it gets
-                        # recorded, but then when it is time to look up the
-                        # stats, we need to request that stats group by name -
-                        # so this is why a given observation maintains a list
-                        # of its stats group names. 
-                        #
-                        observation.stats_group_names.add(stats_group_name)
-                        # call to query.prepare() results in the query being
-                        # serialized into json with the proper stats group
-                        # name etc, basically so that the recurring calls to
-                        # query.execute() will not incur the penalty of
-                        # serializing into json each time
-                        #
-                        query.prepare(self.config['name_index'], self.config['name_doctype'], [stats_group_name])
-                        tq1 = time.time()
-                        for _ in range(1000): 
-                            query.execute(conn)
-                        logger.debug("query: %s executed %i times, time: %.3f", query.name, 1000, time.time()-tq1)
+                self.observe(conn)
                 c = 0
                 # update time_total periodically so that if the benchmark gets
                 # interrupted, at least some information is captured. but
