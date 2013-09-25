@@ -54,9 +54,9 @@ def args_parser():
     parser_show.add_argument('--sample', metavar='N', type=int, default=1, help='sample every Nth observation; (%(default)i)')
     parser_show.add_argument('ids', nargs='*')
 
-    parser_list = subparsers.add_parser('list', help='list recorded benchmarks')
-    parser_list.add_argument('-v', '--verbose', action='store_true')
-    parser_list.add_argument('ids', nargs='*', help='optional list of benchmark ids, empty list means all; (%(default)s)')
+#     parser_list = subparsers.add_parser('list', help='list recorded benchmarks')
+#     parser_list.add_argument('-v', '--verbose', action='store_true')
+#     parser_list.add_argument('ids', nargs='*', help='optional list of benchmark ids, empty list means all; (%(default)s)')
 
     parser_clear = subparsers.add_parser('clear', help='clear recorded benchmarks')
     parser_clear.add_argument('-v', '--verbose', action='store_true')
@@ -90,8 +90,8 @@ def main():
             finally:
                 benchmark.record(conn)
 
-        elif args.command == 'list': 
-            esbench.analyze.list_benchmarks(conn, args.ids)
+#         elif args.command == 'list': 
+#             esbench.analyze.list_benchmarks(conn, args.ids)
             
         elif args.command == 'show': 
             esbench.analyze.analyze_benchmarks(conn, ids=args.ids, step=args.sample)

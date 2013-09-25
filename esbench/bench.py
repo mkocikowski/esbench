@@ -35,7 +35,7 @@ def retry_and_reconnect_on_IOError(method):
                     self.close()
                 return res
             except IOError as (exc):
-                logger.warning("%s (%s) in retry_and_reconnect_on_IOError try: %i, pause: %is", type(exc), exc, i, 1)
+                logger.debug("%s (%s) in retry_and_reconnect_on_IOError try: %i, pause: %is", type(exc), exc, i, 1, exc_info=True)
                 self.close()
         raise # re-raises the last exception, so most likely IOError
     return wrapper
