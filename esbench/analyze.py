@@ -27,11 +27,14 @@ def benchmarks(conn, ids=None):
     path = "stats/bench/_search?sort=time_start:asc&size=100"
     status, reason, data = conn.get(path)
     data = json.loads(data)
-    for benchmark in data['hits']['hits']: 
-        if ids and not benchmark['_id'] in ids: 
-            continue
-        else:
-            yield benchmark
+    try: 
+        for benchmark in data['hits']['hits']: 
+            if ids and not benchmark['_id'] in ids: 
+                continue
+            else:
+                yield benchmark
+    except KeyError:
+        logger.error("no benchmarks found")
     return
     
 
@@ -62,12 +65,6 @@ def analyze_benchmarks(conn, ids=None, step=1):
     return
 
 
-# def list_benchmarks(conn, ids=None): 
-#     for benchmark in benchmarks(conn, ids): 
-#         print("http://localhost:9200/stats/bench/%s %s \n%s" % (benchmark['_id'], benchmark['_source']['time_start'], json.dumps(benchmark['_source']['argv'], indent=4)))
-#     return
-
-
 def dump_benchmarks(conn, ids=None): 
     for benchmark in benchmarks(conn, ids): 
         curl = """curl -XPUT 'http://localhost:9200/stats/bench/%s' -d '%s'""" % (benchmark['_id'], json.dumps(benchmark['_source']))
@@ -79,11 +76,15 @@ def dump_benchmarks(conn, ids=None):
 
 
 def delete_benchmarks(conn, ids=None):
-    for benchmark in benchmarks(conn, ids): 
-        for o in observations(conn, benchmark['_id']): 
-            path = "stats/obs/%s" % (o['_id'], )
-            conn.delete(path)
-        path = "stats/bench/%s" % (benchmark['_id'], )
+    if not ids:
+        path = "stats"
         conn.delete(path)
+    else: 
+        for benchmark in benchmarks(conn, ids): 
+            for o in observations(conn, benchmark['_id']): 
+                path = "stats/obs/%s" % (o['_id'], )
+                conn.delete(path)
+            path = "stats/bench/%s" % (benchmark['_id'], )
+            conn.delete(path)
     return
     

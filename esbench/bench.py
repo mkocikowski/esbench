@@ -293,6 +293,7 @@ class Observation(object):
             k, v in stat['stats']['search']['groups'].items()
         }
 
+        # append the client timing information to stats group info
         for k, v in self.stats_group_times.items(): 
             stat['stats']['search']['groups'][k]['client_time'] = "%.2fs" % (v, )
             stat['stats']['search']['groups'][k]['client_time_in_millis'] = int(v * 1000.0)
@@ -305,7 +306,7 @@ class Observation(object):
         status, reason, data = self.conn.put(path, data)
         if status not in [200, 201]: 
             logger.error("%s, %s, %s", status, reason, data)
-#         logger.info("recorded observation into: %s", path)
+        logger.debug("recorded observation into: %s", path)
         return (status, reason, data, curl)
 
 
