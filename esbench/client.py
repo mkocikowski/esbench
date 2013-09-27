@@ -6,9 +6,9 @@
 import argparse
 import itertools
 import logging
-import sys
 import contextlib
 
+import esbench.api
 import esbench.analyze
 import esbench.bench
 
@@ -43,7 +43,8 @@ def args_parser():
     parser_run.add_argument('-v', '--verbose', action='store_true')
     parser_run.add_argument('--observations', metavar='N', type=int, default=10, help='run n observations; (%(default)i)')
     parser_run.add_argument('--segments', type=int, metavar='N', default=None, help='max_num_segments for optimize calls; (%(default)s)')
-    parser_run.add_argument('--refresh', type=str, metavar='T', default='1s', help="'refresh_interval' for the index, '-1' for none; (%(default)s)")
+    parser_run.add_argument('--repetitions', metavar='N', type=int, default=1000, help='run each query n times per observation; (%(default)i)')
+#     parser_run.add_argument('--refresh', type=str, metavar='T', default='1s', help="'refresh_interval' for the index, '-1' for none; (%(default)s)")
     parser_run.add_argument('--no-optimize-calls', action='store_true', help="if set, do not optimize before observations")
     parser_run.add_argument('--config-file-path', metavar='', type=str, default='./config.json', help="path to json config file; (%(default)s)")
     parser_run.add_argument('--data', metavar='PATH', type=str, action='store', default=None, help="read data from PATH; set to /dev/stdin to read from stdin. Set this only if you want to provide your own data, by default US Patent Application data will be used; (%(default)s)")
@@ -52,6 +53,7 @@ def args_parser():
     parser_observe = subparsers.add_parser('observe', help='run an observation (no data loading)')
     parser_observe.set_defaults(no_optimize_calls=True, segments=None)
     parser_observe.add_argument('-v', '--verbose', action='store_true')
+    parser_observe.add_argument('--repetitions', metavar='N', type=int, default=1000, help='run each query n times per observation; (%(default)i)')
     parser_observe.add_argument('--config-file-path', metavar='', type=str, default='./config.json', help="path to json config file; (%(default)s)")
     parser_observe.add_argument('n', nargs="?", type=int, default=1, help='number of observations; (%(default)i)')
 
@@ -82,29 +84,22 @@ def main():
     loglevel = logging.INFO if not args.verbose else logging.DEBUG
     logging.basicConfig(level=loglevel)
 
-    with esbench.bench.connect() as conn: 
+    with esbench.api.connect() as conn: 
 
         if args.command == 'run':         
-            benchmark = esbench.bench.Benchmark(args)
-            try: 
-                benchmark.prepare(conn)
-                with get_lines_iterator(args.data, args.n) as lines: 
-                    benchmark.run(conn, lines)            
-            except Exception as exc:
-                logger.error(exc, exc_info=True)
-                raise
-            finally:
-                benchmark.record(conn)
+            benchmark = esbench.bench.Benchmark(args, conn)
+            benchmark.prepare()
+            with get_lines_iterator(args.data, args.n) as lines: 
+                benchmark.run(lines)
+            benchmark.record()
 
         elif args.command == 'observe': 
-            benchmark = esbench.bench.Benchmark(args)
+            benchmark = esbench.bench.Benchmark(args, conn)
+            benchmark.prepare()
             for _ in range(args.n):
-                benchmark.observe(conn)
-            benchmark.record(conn)            
+                benchmark.observe()
+            benchmark.record()            
 
-#         elif args.command == 'list': 
-#             esbench.analyze.list_benchmarks(conn, args.ids)
-            
         elif args.command == 'show': 
             esbench.analyze.analyze_benchmarks(conn, ids=args.ids, step=args.sample)
             

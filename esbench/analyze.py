@@ -2,31 +2,17 @@
 # (c)2013 Mik Kocikowski, MIT License (http://opensource.org/licenses/MIT)
 # https://github.com/mkocikowski/esbench
 
-import urlparse
-import httplib
-import contextlib
 import itertools
 import logging
-import argparse
-import sys
 import json
-import time
-import random
-import traceback
-import datetime
 
-import esbench.bench
 
 logger = logging.getLogger(__name__)
 
-conn = None
-DEFAULT_TIMEOUT = 10
-
-
 def benchmarks(conn, ids=None): 
-    path = "stats/bench/_search?sort=time_start:asc&size=100"
-    status, reason, data = conn.get(path)
-    data = json.loads(data)
+    path = "stats/bench/_search?sort=benchmark_start:asc&size=100"
+    resp = conn.get(path)
+    data = json.loads(resp.data)
     try: 
         for benchmark in data['hits']['hits']: 
             if ids and not benchmark['_id'] in ids: 
@@ -34,14 +20,14 @@ def benchmarks(conn, ids=None):
             else:
                 yield benchmark
     except KeyError:
-        logger.error("no benchmarks found")
+        logger.error("no benchmarks found", exc_info=True)
     return
     
 
 def observations(conn, benchmark_id): 
     path = "stats/obs/_search?q=meta.benchmark_id:%s&sort=meta.observation_start:asc&size=10000" % (benchmark_id, )
-    status, reason, data = conn.get(path)
-    data = json.loads(data)
+    resp = conn.get(path)
+    data = json.loads(resp.data)
     for observation in data['hits']['hits']: 
         yield observation
 
@@ -56,9 +42,9 @@ def analyze_benchmarks(conn, ids=None, step=1):
             d['_source']['segments']['num_search_segments'],
             seg_max,
             d['_source']['stats']['store']['size'],  
-            d['_source']['segments']['t_optimize_in_millis'] / 1000.0, 
+            d['_source']['segments']['t_optimize_in_millis'] / 1000.0 if d['_source']['segments']['t_optimize_in_millis'] else -1.0, 
             ) for d in obs_i]
-        print("\nBenchmark: %s, start: %s, total: %s \n" % (benchmark['_id'], benchmark['_source']['time_start'], benchmark['_source']['time_total'],))
+        print("\nBenchmark: %s, start: %s, total: %s \n" % (benchmark['_id'], benchmark['_source']['benchmark_start'], benchmark['_source']['t_total'],))
         for t in r:
             print("N: %-6i %s SEG/MAX: %3i/%s SIZE: %8s OPT: %6.2f" % t)
         print("")
@@ -78,7 +64,8 @@ def dump_benchmarks(conn, ids=None):
 def delete_benchmarks(conn, ids=None):
     if not ids:
         path = "stats"
-        conn.delete(path)
+        resp = conn.delete(path)
+        logger.info(resp.curl)
     else: 
         for benchmark in benchmarks(conn, ids): 
             for o in observations(conn, benchmark['_id']): 
