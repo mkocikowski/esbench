@@ -162,9 +162,10 @@ class Observation(object):
 
 class Benchmark(object):
 
-    def __init__(self, argv, conn):
+    def __init__(self, cmnd, argv, conn):
 
         self.benchmark_id = hashlib.md5(str(time.time())).hexdigest()[:8]
+        self.cmnd = cmnd
         self.argv = argv
         self.conn = conn
         
@@ -251,6 +252,7 @@ class Benchmark(object):
             't_total': "%.2fm" % (self.t_total / 60.0), 
             't_total_in_millis': int(self.t_total * 1000), 
             'argv': self.argv.__dict__, 
+            'cmnd': self.cmnd, 
             'config': json.dumps(self.config), 
         }
 

@@ -7,6 +7,7 @@ import argparse
 import itertools
 import logging
 import contextlib
+import sys
 
 import esbench.api
 import esbench.analyze
@@ -81,6 +82,7 @@ def args_parser():
 def main():
 
     args = args_parser().parse_args()
+    cmnd = " ".join(sys.argv[1:])
     
     loglevel = logging.INFO if not args.verbose else logging.DEBUG
     logging.basicConfig(level=loglevel)
@@ -88,14 +90,14 @@ def main():
     with esbench.api.connect() as conn: 
 
         if args.command == 'run':         
-            benchmark = esbench.bench.Benchmark(args, conn)
+            benchmark = esbench.bench.Benchmark(cmnd, args, conn)
             benchmark.prepare()
             with get_lines_iterator(args.data, args.n) as lines: 
                 benchmark.run(lines)
             benchmark.record()
 
         elif args.command == 'observe': 
-            benchmark = esbench.bench.Benchmark(args, conn)
+            benchmark = esbench.bench.Benchmark(cmnd, args, conn)
             benchmark.prepare()
             for _ in range(args.n):
                 benchmark.observe()
