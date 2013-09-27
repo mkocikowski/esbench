@@ -2,18 +2,14 @@
 # (c)2013 Mik Kocikowski, MIT License (http://opensource.org/licenses/MIT)
 # https://github.com/mkocikowski/esbench
 
-# import httplib
-# import contextlib
 import itertools
 import logging
-# import argparse
 import json
 import time
 import random
 import datetime
 import hashlib
 import string
-# import collections
 
 import esbench.api
 import esbench.data
@@ -225,8 +221,9 @@ class Benchmark(object):
 
     def run(self, lines): 
 
-        esbench.api.index_delete(self.conn, self.index)
-        esbench.api.index_create(self.conn, self.index, self.config['index'])
+        if not self.argv.append: 
+            esbench.api.index_delete(self.conn, self.index)
+            esbench.api.index_create(self.conn, self.index, self.config['index'])
 
         observation_period = self.argv.n // self.argv.observations
         if observation_period < 10: 

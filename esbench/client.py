@@ -47,6 +47,7 @@ def args_parser():
 #     parser_run.add_argument('--refresh', type=str, metavar='T', default='1s', help="'refresh_interval' for the index, '-1' for none; (%(default)s)")
     parser_run.add_argument('--no-optimize-calls', action='store_true', help="if set, do not optimize before observations")
     parser_run.add_argument('--config-file-path', metavar='', type=str, default='./config.json', help="path to json config file; (%(default)s)")
+    parser_run.add_argument('--append', action='store_true', help="if set, append data to the index; (%(default)s)")
     parser_run.add_argument('--data', metavar='PATH', type=str, action='store', default=None, help="read data from PATH; set to /dev/stdin to read from stdin. Set this only if you want to provide your own data, by default US Patent Application data will be used; (%(default)s)")
     parser_run.add_argument('n', nargs="?", type=int, default=100, help='number of documents; (%(default)i)')
 
