@@ -100,6 +100,7 @@ class Observation(object):
             for _ in range(self.reps): 
                 query.execute(self.conn)
             query.t_client = time.time() - tA
+            logger.info("ran query '%s' %i times in %.2fs", query.name, self.reps, query.t_client)
 
         self.ts_stop = timestamp()
         logger.info("finished observation no: %i, id: %s, time: %.3f", 
@@ -199,6 +200,7 @@ class Benchmark(object):
             t1 = time.time() 
             resp = esbench.api.index_optimize(self.conn, self.index, self.argv.segments)
             observation.t_optimize = time.time() - t1
+            logger.info("optimize call: %.2fs", observation.t_optimize)
 
         observation.run()
         observation.record()
@@ -216,6 +218,7 @@ class Benchmark(object):
         for line in lines: 
             resp = esbench.api.document_post(self.conn, self.index, self.doctype, line)
             count += 1
+        logger.info("loaded %i lines into index '%s'", count, self.index)
         return count
 
 
