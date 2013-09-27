@@ -59,6 +59,8 @@ class Conn(object):
         self.conn.request('GET', path, body=None)
         resp = self.conn.getresponse()
         data = resp.read()
+        if resp.status not in [200, 201]:
+            logger.error((resp.status, path))
         return ApiResponse(resp.status, resp.reason, data, curl)
     
     @retry_and_reconnect_on_IOError
@@ -68,6 +70,8 @@ class Conn(object):
         self.conn.request('PUT', path, data, head)
         resp = self.conn.getresponse()
         data = resp.read()
+        if resp.status not in [200, 201]:
+            logger.error((resp.status, path))
         return ApiResponse(resp.status, resp.reason, data, curl)
 
     @retry_and_reconnect_on_IOError
@@ -77,6 +81,8 @@ class Conn(object):
         self.conn.request('POST', path, data, head)
         resp = self.conn.getresponse()
         data = resp.read()
+        if resp.status not in [200, 201]:
+            logger.error((resp.status, path))
         return ApiResponse(resp.status, resp.reason, data, curl)
 
     @retry_and_reconnect_on_IOError
@@ -85,6 +91,8 @@ class Conn(object):
         self.conn.request('DELETE', path)
         resp = self.conn.getresponse()
         data = resp.read()
+        if resp.status not in [200, 201]:
+            logger.error((resp.status, path))
         return ApiResponse(resp.status, resp.reason, data, curl)
 
 
