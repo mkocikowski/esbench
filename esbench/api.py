@@ -23,6 +23,7 @@ def retry_and_reconnect_on_IOError(method):
         for i in [1, 2, 5, 10, 25, 50, 75, 100]:
             try: 
                 if not self.conn:
+#                     logger.debug("opening http conn: %s, %s", str(args), str(kwargs))
                     self.connect(timeout=self.timeout*i)
                 res = method(self, *args, **kwargs)
                 # connections with really long timeouts should not be kept
@@ -39,14 +40,16 @@ def retry_and_reconnect_on_IOError(method):
 
 class Conn(object): 
     
-    def __init__(self, host='localhost', port=9200, timeout=DEFAULT_TIMEOUT): 
+    def __init__(self, host='localhost', port=9200, timeout=DEFAULT_TIMEOUT, conn_cls=httplib.HTTPConnection): 
         self.host = host
         self.port = port
         self.timeout = timeout
+        self.conn_cls = conn_cls
         self.conn = None
     
     def connect(self, timeout=DEFAULT_TIMEOUT): 
-        self.conn = httplib.HTTPConnection(host=self.host, port=self.port, timeout=timeout)
+#         self.conn = httplib.HTTPConnection(host=self.host, port=self.port, timeout=timeout)
+        self.conn = self.conn_cls(host=self.host, port=self.port, timeout=timeout)
         self.conn.connect()
     
     def close(self): 
@@ -55,8 +58,9 @@ class Conn(object):
     
     @retry_and_reconnect_on_IOError
     def get(self, path):
-        curl = "curl -XGET http://%s:%i/%s" % (self.host, self.port, path)
-        self.conn.request('GET', path, body=None)
+        method = 'GET'
+        curl = "curl -X%s http://%s:%i/%s" % (method, self.host, self.port, path)
+        self.conn.request(method, path, body=None)
         resp = self.conn.getresponse()
         data = resp.read()
         if resp.status not in [200, 201]:
@@ -65,9 +69,10 @@ class Conn(object):
     
     @retry_and_reconnect_on_IOError
     def put(self, path, data):
-        curl = "curl -XPUT http://%s:%i/%s -d '%s'" % (self.host, self.port, path, data)
+        method = 'PUT'
+        curl = "curl -X%s http://%s:%i/%s -d '%s'" % (method, self.host, self.port, path, data)
         head = {'Content-type': 'application/json'}
-        self.conn.request('PUT', path, data, head)
+        self.conn.request(method, path, data, head)
         resp = self.conn.getresponse()
         data = resp.read()
         if resp.status not in [200, 201]:
@@ -76,9 +81,10 @@ class Conn(object):
 
     @retry_and_reconnect_on_IOError
     def post(self, path, data):
-        curl = "curl -XPOST http://%s:%i/%s -d '%s'" % (self.host, self.port, path, data)
+        method = 'POST'
+        curl = "curl -X%s http://%s:%i/%s -d '%s'" % (method, self.host, self.port, path, data)
         head = {'Content-type': 'application/json'}
-        self.conn.request('POST', path, data, head)
+        self.conn.request(method, path, data, head)
         resp = self.conn.getresponse()
         data = resp.read()
         if resp.status not in [200, 201]:
@@ -87,8 +93,9 @@ class Conn(object):
 
     @retry_and_reconnect_on_IOError
     def delete(self, path, data=None):
-        curl = "curl -XDELETE http://%s:%i/%s" % (self.host, self.port, path)
-        self.conn.request('DELETE', path)
+        method = 'DELETE'
+        curl = "curl -X%s http://%s:%i/%s" % (method, self.host, self.port, path)
+        self.conn.request(method, path)
         resp = self.conn.getresponse()
         data = resp.read()
         if resp.status not in [200, 201]:
@@ -104,10 +111,10 @@ def connect(host='localhost', port=9200, timeout=DEFAULT_TIMEOUT):
 
 
 
-def document_put(conn, index, doctype, docid, data): 
-    path = '%s/%s/%s' % (index, doctype, docid)
-    resp = conn.put(path, data)
-    return resp
+# def document_put(conn, index, doctype, docid, data): 
+#     path = '%s/%s/%s' % (index, doctype, docid)
+#     resp = conn.put(path, data)
+#     return resp
 
 
 def document_post(conn, index, doctype, data): 
