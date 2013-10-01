@@ -36,6 +36,8 @@ class MockHTTPConnection(object):
         self.timeout = timeout
         self.sock = None
         self.req = None
+        self.requests = []
+        self.responses = []
     
     def connect(self):
         self.sock = True
@@ -45,10 +47,13 @@ class MockHTTPConnection(object):
     
     def request(self, method, url, body=None, headers=None): 
         self.req = (method, url, body)
+        self.requests.append(self.req)
         return
     
     def getresponse(self):
-        return MockHTTPResponse(self.req)
+        resp = MockHTTPResponse(self.req)
+        self.responses.append(resp)
+        return resp
     
 
 class ApiConnTest(unittest.TestCase):
@@ -62,11 +67,32 @@ class ApiConnTest(unittest.TestCase):
         c.close()
         self.assertIsNone(c.conn)
 
+    def test_connect(self):
+        with esbench.api.connect(conn_cls=MockHTTPConnection) as c: 
+            resp = c.get("foo/bar")
+            self.assertEqual(resp.status, 200)
+            self.assertIs(c.conn.sock, True)                    
+        self.assertIsNone(c.conn)
+
+    def test_req_resp(self):
+        # test request and response recording
+        c = esbench.api.Conn(conn_cls=MockHTTPConnection)
+        resp = c.get("foo/bar")
+        self.assertEqual(resp.status, 200)
+        resp = c.get("foo/bar", json.dumps({'status': 404, 'reason': 'not found'}))
+        self.assertEqual(resp.status, 404)
+        self.assertEqual(resp.reason, 'not found')
+        resp = c.delete("foo/bar")
+        self.assertEqual(c.conn.requests, [('GET', 'foo/bar', None), ('GET', 'foo/bar', '{"status": 404, "reason": "not found"}'), ('DELETE', 'foo/bar', None)])
+        self.assertEqual([r.status for r in c.conn.responses], [200, 404, 200])
+
     def test_conn_get(self):
         c = esbench.api.Conn(conn_cls=MockHTTPConnection)
         resp = c.get("test/_stats")
         self.assertIsInstance(resp, esbench.api.ApiResponse)
         self.assertEqual(resp.curl, "curl -XGET http://localhost:9200/test/_stats")
+        resp = c.get("foo/bar", 'baz')
+        self.assertEqual(resp.curl, "curl -XGET http://localhost:9200/foo/bar -d 'baz'")
 
     def test_conn_put(self):
         c = esbench.api.Conn(conn_cls=MockHTTPConnection)

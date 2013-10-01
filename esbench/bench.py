@@ -49,7 +49,7 @@ class SearchQuery(object):
         self.query['stats'] = [self.stats_group_name]
         
         self.query_path = '%s/%s/_search' % (index, doctype)
-        self.query_string = json.dumps(self.query)
+        self.query_string = json.dumps(self.query, sort_keys=True)
         
         self.t_client = None
 

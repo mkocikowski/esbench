@@ -21,6 +21,7 @@ setup(
     long_description=ld,
     packages = ['esbench', 'esbench.test'], 
     package_data={'': ['README.md',],},
+    data_files=[('./', './esbench/config.json')], 
     entry_points = {
         'console_scripts': [
             'esbench = esbench.client:main', 

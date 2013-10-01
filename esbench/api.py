@@ -57,10 +57,15 @@ class Conn(object):
         self.conn = None
     
     @retry_and_reconnect_on_IOError
-    def get(self, path):
+    def get(self, path, data=None):
         method = 'GET'
-        curl = "curl -X%s http://%s:%i/%s" % (method, self.host, self.port, path)
-        self.conn.request(method, path, body=None)
+        if data: 
+            curl = "curl -X%s http://%s:%i/%s -d '%s'" % (method, self.host, self.port, path, data)
+            head = {'Content-type': 'application/json'}
+        else:
+            curl = "curl -X%s http://%s:%i/%s" % (method, self.host, self.port, path)
+            head = {}
+        self.conn.request(method, path, data, head)
         resp = self.conn.getresponse()
         data = resp.read()
         if resp.status not in [200, 201]:
@@ -110,8 +115,8 @@ class Conn(object):
 
 
 @contextlib.contextmanager
-def connect(host='localhost', port=9200, timeout=DEFAULT_TIMEOUT): 
-    conn = Conn(host=host, port=port, timeout=timeout)
+def connect(host='localhost', port=9200, timeout=DEFAULT_TIMEOUT, conn_cls=httplib.HTTPConnection): 
+    conn = Conn(host=host, port=port, timeout=timeout, conn_cls=conn_cls)
     yield conn
     conn.close()
 
