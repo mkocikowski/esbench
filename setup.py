@@ -6,6 +6,9 @@
 # python setup.py -r http://testpypi.python.org/pypi register
 # python setup.py sdist upload -r http://pypi.python.org/pypi
 
+# import ez_setup
+# ez_setup.use_setuptools()
+# 
 from setuptools import setup
 
 ld = """Scripts for benchmarking Elasticsearch nodes. 
@@ -18,10 +21,12 @@ setup(
     author_email = 'mkocikowski@gmail.com', 
     url = 'https://github.com/mkocikowski/esbench', 
     description = 'Elasticsearch benchmarking tool', 
-    long_description=ld,
+    long_description = ld,
     packages = ['esbench', 'esbench.test'], 
-    package_data={'': ['README.md',],},
-    data_files=[('./', './esbench/config.json')], 
+    package_data = {
+        '': ['README.md'], 
+        'esbench': ['config.json'], 
+    },
     entry_points = {
         'console_scripts': [
             'esbench = esbench.client:main', 
@@ -39,5 +44,5 @@ setup(
         "Topic :: Utilities",
     ], 
     license = 'MIT',
-#     test_suite = "elsec.test.units.suite", 
+    test_suite = "esbench.test.units.suite", 
 )
