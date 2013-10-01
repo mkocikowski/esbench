@@ -11,7 +11,7 @@
 # 
 from setuptools import setup
 
-ld = """Scripts for benchmarking Elasticsearch nodes. 
+ld = """Tool for benchmarking Elasticsearch nodes. 
 """
 
 setup(

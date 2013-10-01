@@ -38,8 +38,7 @@ def get_lines_iterator(path=None, count=None):
 def args_parser():
 
     parser = argparse.ArgumentParser(description="Elasticsearch benchmark runner")
-    parser.add_argument('--version', action='version', version=esbench.__version__)
-    parser.add_argument('-v', '--verbose', action='store_true')
+    parser.add_argument('-v', '--version', action='version', version=esbench.__version__)
     subparsers = parser.add_subparsers(dest='command', title='commands')
 
     parser_run = subparsers.add_parser('run', help='run a benchmark')
