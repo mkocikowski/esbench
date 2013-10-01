@@ -69,6 +69,8 @@ class Conn(object):
     
     @retry_and_reconnect_on_IOError
     def put(self, path, data):
+        if not data:
+            raise ValueError('data must not evaluate to false')
         method = 'PUT'
         curl = "curl -X%s http://%s:%i/%s -d '%s'" % (method, self.host, self.port, path, data)
         head = {'Content-type': 'application/json'}
@@ -82,8 +84,12 @@ class Conn(object):
     @retry_and_reconnect_on_IOError
     def post(self, path, data):
         method = 'POST'
-        curl = "curl -X%s http://%s:%i/%s -d '%s'" % (method, self.host, self.port, path, data)
-        head = {'Content-type': 'application/json'}
+        if data: 
+            curl = "curl -X%s http://%s:%i/%s -d '%s'" % (method, self.host, self.port, path, data)
+            head = {'Content-type': 'application/json'}
+        else:
+            curl = "curl -X%s http://%s:%i/%s" % (method, self.host, self.port, path)
+            head = {}
         self.conn.request(method, path, data, head)
         resp = self.conn.getresponse()
         data = resp.read()
@@ -92,7 +98,7 @@ class Conn(object):
         return ApiResponse(resp.status, resp.reason, data, curl)
 
     @retry_and_reconnect_on_IOError
-    def delete(self, path, data=None):
+    def delete(self, path):
         method = 'DELETE'
         curl = "curl -X%s http://%s:%i/%s" % (method, self.host, self.port, path)
         self.conn.request(method, path)
