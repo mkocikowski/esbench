@@ -44,7 +44,7 @@ def analyze_benchmarks(conn, ids=None, step=1):
             d['_source']['stats']['store']['size'],  
             d['_source']['segments']['t_optimize_in_millis'] / 1000.0 if d['_source']['segments']['t_optimize_in_millis'] else -1.0, 
             ) for d in obs_i]
-        print("\nBenchmark: %s, start: %s, total: %s \n" % (benchmark['_id'], benchmark['_source']['benchmark_start'], benchmark['_source']['t_total'],))
+        print("\nBenchmark: %s (%s), start: %s, total: %s \n" % (benchmark['_source'].get('benchmark_name', 'unknown'), benchmark['_id'], benchmark['_source']['benchmark_start'], benchmark['_source']['t_total'],))
         for t in r:
             print("N: %-6i %s SEG/MAX: %3i/%s SIZE: %8s OPT: %6.2f" % t)
         print("")

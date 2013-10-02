@@ -20,6 +20,10 @@ logger = logging.getLogger(__name__)
 DEFAULT_TIMEOUT = 10
 
 
+def uuid():
+    return hashlib.md5("%s%f" % (str(time.time()), random.random())).hexdigest()[:8]
+
+
 # timeit.timeit('rands(6)', setup='from __main__ import rands', number=1000)
 def rands(length=6):
     l = len(string.ascii_letters)-1
@@ -76,7 +80,7 @@ class Observation(object):
 
         Observation._count += 1
         self.observation_sequence_no = Observation._count
-        self.observation_id = hashlib.md5(str(time.time())).hexdigest()[:8]
+        self.observation_id = uuid()
         
         self.queries = []
         for name, body in queries.items():
@@ -151,7 +155,7 @@ class Observation(object):
         obs['stats'] = stats
 
 #         print(json.dumps(obs, indent=4, sort_keys=True))
-        data = json.dumps(obs)
+        data = json.dumps(obs, sort_keys=True)
         path = 'stats/obs/%s' % (self.observation_id, )
         resp = self.conn.put(path, data)
         if resp.status not in [200, 201]: 
@@ -164,7 +168,7 @@ class Benchmark(object):
 
     def __init__(self, cmnd, argv, conn):
 
-        self.benchmark_id = hashlib.md5(str(time.time())).hexdigest()[:8]
+        self.benchmark_id = uuid()
         self.cmnd = cmnd
         self.argv = argv
         self.conn = conn
@@ -247,16 +251,17 @@ class Benchmark(object):
 
         stat = {
             'benchmark_id': self.benchmark_id, 
+            'benchmark_name': self.argv.name, 
             'benchmark_start': self.ts_start, 
             'benchmark_stop': self.ts_stop, 
             't_total': "%.2fm" % (self.t_total / 60.0), 
             't_total_in_millis': int(self.t_total * 1000), 
             'argv': self.argv.__dict__, 
             'cmnd': self.cmnd, 
-            'config': json.dumps(self.config), 
+            'config': json.dumps(self.config, sort_keys=True), 
         }
 
-        data = json.dumps(stat)
+        data = json.dumps(stat, sort_keys=True)
         path = 'stats/bench/%s' % (self,)
         resp = self.conn.put(path, data)
         logger.info("recorded benchmark into: %s", path)

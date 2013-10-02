@@ -9,6 +9,7 @@ import logging
 import contextlib
 import sys
 import os.path
+import socket
 
 import esbench.api
 import esbench.analyze
@@ -37,7 +38,9 @@ def get_lines_iterator(path=None, count=None):
 
 def args_parser():
 
-    parser = argparse.ArgumentParser(description="Elasticsearch benchmark runner")
+    epilog = ""
+
+    parser = argparse.ArgumentParser(description="Elasticsearch benchmark runner (%s)" % (esbench.__version__, ), epilog=epilog)
     parser.add_argument('-v', '--version', action='version', version=esbench.__version__)
     subparsers = parser.add_subparsers(dest='command', title='commands')
 
@@ -50,6 +53,7 @@ def args_parser():
     parser_run.add_argument('--no-load', action='store_true', help="if set, do not load data, just run observations")
     parser_run.add_argument('--no-optimize-calls', action='store_true', help="if set, do not optimize before observations")
     parser_run.add_argument('--config-file-path', metavar='', type=str, default='%s/config.json' % (os.path.dirname(os.path.abspath(__file__)), ), help="path to json config file; (%(default)s)")
+    parser_run.add_argument('--name', type=str, action='store', default="%s::%s" % (socket.gethostname(), esbench.bench.timestamp()), help="human readable name of the benchmark; (%(default)s)")
     parser_run.add_argument('--append', action='store_true', help="if set, append data to the index; (%(default)s)")
     parser_run.add_argument('--data', metavar='PATH', type=str, action='store', default=None, help="read data from PATH; set to /dev/stdin to read from stdin. Set this only if you want to provide your own data, by default US Patent Application data will be used; (%(default)s)")
     parser_run.add_argument('n', nargs="?", type=int, default=100, help='number of documents; (%(default)i)')

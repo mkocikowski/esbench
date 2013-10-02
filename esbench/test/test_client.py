@@ -23,6 +23,7 @@ class ClientTest(unittest.TestCase):
                 'segments': None, 
                 'repetitions': 100, 
                 'n': 100, 
+                'name': args.name, # cheating, but no clean way around it as it contains timestamp
                 'no_load': False,
                 'command': 'run', 
                 'observations': 10, 
