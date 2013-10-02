@@ -16,7 +16,7 @@ ld = """Tool for benchmarking Elasticsearch nodes.
 
 setup(
     name = 'esbench', 
-    version = '0.0.5', 
+    version = '0.0.6', 
     author = 'Mik Kocikowski', 
     author_email = 'mkocikowski@gmail.com', 
     url = 'https://github.com/mkocikowski/esbench', 

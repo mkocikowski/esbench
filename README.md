@@ -7,12 +7,13 @@ own convenience, not to share with people yet.
 Installation
 ------------
 
-    pip install https://github.com/mkocikowski/esbench/archive/dev.zip
+    pip install https://github.com/mkocikowski/esbench/archive/master.zip
 
-If you don't want to use pip (which is a nice python package manager /
-installer), you can download the source, cd to the directory which contains
-the 'setup.py' file, and run 'python setup.py install'. But I recommend using
-'pip'.
+Tests
+-----
+Once 'esbench' has been installed:
+
+	python -m esbench.test.units
 
 Running
 -------
