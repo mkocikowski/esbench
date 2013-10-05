@@ -121,6 +121,7 @@ class Observation(object):
             "num_committed_segments": _s['indices'][self.index]['shards']['0'][0]['num_committed_segments'], 
             "t_optimize": "%.2fs" % (self.t_optimize, ) if self.t_optimize else None, 
             "t_optimize_in_millis": int(self.t_optimize * 1000) if self.t_optimize else None, 
+            "segments": _s['indices'][self.index]['shards']['0'][0]['segments'], 
         }
 
         return segments
