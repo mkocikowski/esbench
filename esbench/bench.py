@@ -111,33 +111,26 @@ class Observation(object):
             self.observation_sequence_no, self.observation_id, time.time()-t1)
 
 
-    def record(self): 
-
-        obs = {
-            'meta': {
-                'benchmark_id': self.benchmark_id, 
-                'observation_id': self.observation_id, 
-                'observation_sequence_no': self.observation_sequence_no, 
-                'observation_start': self.ts_start,
-                'observation_stop': self.ts_stop, 
-            }, 
-            'segments': {}, 
-            'stats': {}, 
-        }
-        
-        resp = esbench.api.index_get_segments(self.conn, self.index) 
+    def _segments(self, segments_f=esbench.api.index_get_segments): 
+    
+        resp = segments_f(self.conn, self.index) 
         _s = json.loads(resp.data)
-        obs['segments'] = { 
+
+        segments = { 
             "num_search_segments": _s['indices'][self.index]['shards']['0'][0]['num_search_segments'], 
             "num_committed_segments": _s['indices'][self.index]['shards']['0'][0]['num_committed_segments'], 
+            "t_optimize": "%.2fs" % (self.t_optimize, ) if self.t_optimize else None, 
+            "t_optimize_in_millis": int(self.t_optimize * 1000) if self.t_optimize else None, 
         }
-        obs['segments']['t_optimize'] = "%.2fs" % (self.t_optimize, ) if self.t_optimize else None
-        obs['segments']['t_optimize_in_millis'] = int(self.t_optimize * 1000) if self.t_optimize else None
 
+        return segments
+        
+
+    def _stats(self, stats_f=esbench.api.index_get_stats): 
 
         # we need to specifically ask for the stats groups we want, by name.
         stats_group_names = [q.stats_group_name for q in self.queries]
-        resp = esbench.api.index_get_stats(self.conn, self.index, ",".join(stats_group_names))
+        resp = stats_f(self.conn, self.index, ",".join(stats_group_names))
         stats = json.loads(resp.data)['indices'][self.index]['primaries']
 
         def _remove_obs_id(s): 
@@ -151,8 +144,52 @@ class Observation(object):
         for query in self.queries: 
             stats['search']['groups'][query.name]['client_time'] = "%.2fs" % (query.t_client, ) if query.t_client else None
             stats['search']['groups'][query.name]['client_time_in_millis'] = int(query.t_client * 1000.0) if query.t_client else None
-            
-        obs['stats'] = stats
+
+        return stats
+    
+
+    def record(self): 
+
+        obs = {
+            'meta': {
+                'benchmark_id': self.benchmark_id, 
+                'observation_id': self.observation_id, 
+                'observation_sequence_no': self.observation_sequence_no, 
+                'observation_start': self.ts_start,
+                'observation_stop': self.ts_stop, 
+            }, 
+            'segments': self._segments(), 
+            'stats': self._stats(), 
+        }
+        
+#         resp = esbench.api.index_get_segments(self.conn, self.index) 
+#         _s = json.loads(resp.data)
+#         obs['segments'] = { 
+#             "num_search_segments": _s['indices'][self.index]['shards']['0'][0]['num_search_segments'], 
+#             "num_committed_segments": _s['indices'][self.index]['shards']['0'][0]['num_committed_segments'], 
+#         }
+#         obs['segments']['t_optimize'] = "%.2fs" % (self.t_optimize, ) if self.t_optimize else None
+#         obs['segments']['t_optimize_in_millis'] = int(self.t_optimize * 1000) if self.t_optimize else None
+
+# 
+#         # we need to specifically ask for the stats groups we want, by name.
+#         stats_group_names = [q.stats_group_name for q in self.queries]
+#         resp = esbench.api.index_get_stats(self.conn, self.index, ",".join(stats_group_names))
+#         stats = json.loads(resp.data)['indices'][self.index]['primaries']
+# 
+#         def _remove_obs_id(s): 
+#             return "_".join(s.split("_")[1:])
+# 
+#         stats['search']['groups'] = {
+#             _remove_obs_id(k): v for 
+#             k, v in stats['search']['groups'].items()
+#         }
+# 
+#         for query in self.queries: 
+#             stats['search']['groups'][query.name]['client_time'] = "%.2fs" % (query.t_client, ) if query.t_client else None
+#             stats['search']['groups'][query.name]['client_time_in_millis'] = int(query.t_client * 1000.0) if query.t_client else None
+#             
+#         obs['stats'] = stats
 
 #         print(json.dumps(obs, indent=4, sort_keys=True))
         data = json.dumps(obs, sort_keys=True)

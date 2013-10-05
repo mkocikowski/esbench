@@ -46,6 +46,65 @@ class SearchQueryTest(unittest.TestCase):
         self.assertEqual(resp.curl, """curl -XPOST http://localhost:9200/test/doc/_search -d \'{"match": {"foo": "bar"}, "stats": ["ABCDEFGH_match"]}\'""")
 
 
+
+class ObservationTest(unittest.TestCase): 
+
+    @classmethod
+    def setUpClass(cls):
+        cls.queries = json.loads("""{"mlt": {"fields": ["description.txt"], "from": 0, "query": {"more_like_this": {"fields": ["description.txt"], "like_text": "USING V%(variable)s PROTECTING THE CARTRIDGE FROM WELDING HEAT", "max_query_terms": 25, "min_term_freq": 2, "percent_terms_to_match": 0.3}}, "size": 10}, "match": {"fields": ["description.txt"], "from": 0, "query": {"match": {"description.txt": "computing V%(variable)s device portable"}}, "size": 10}}""")
+
+
+    def setUp(self):
+        self.conn = esbench.api.Conn(conn_cls=esbench.test.test_api.MockHTTPConnection)
+        self.observation = esbench.bench.Observation(
+                        conn = self.conn, 
+                        benchmark_id = 'bench1', 
+                        queries = self.queries, 
+                        reps = 10, 
+                        index = 'test', 
+                        doctype = 'doc', 
+        )
+
+
+    def test_init(self): 
+        self.assertIsNone(self.observation.ts_start)
+        self.assertIsNone(self.observation.ts_stop)
+        self.assertIsInstance(self.observation.queries[1], esbench.bench.SearchQuery)        
+
+
+    def test_segments(self):
+        
+        def _f(conn, index):
+            return esbench.api.ApiResponse(200, 'ok', """{"ok":true,"_shards":{"total":1,"successful":1,"failed":0},"indices":{"test":{"shards":{"0":[{"routing":{"state":"STARTED","primary":true,"node":"YFJaFqa6Q-m-FPY_IRQ5nw"},"num_committed_segments":3,"num_search_segments":3,"segments":{"_a":{"generation":10,"num_docs":80,"deleted_docs":0,"size":"2.4mb","size_in_bytes":2524210,"committed":true,"search":true,"version":"4.4","compound":false},"_b":{"generation":11,"num_docs":10,"deleted_docs":0,"size":"271.7kb","size_in_bytes":278301,"committed":true,"search":true,"version":"4.4","compound":true},"_c":{"generation":12,"num_docs":10,"deleted_docs":0,"size":"225.3kb","size_in_bytes":230761,"committed":true,"search":true,"version":"4.4","compound":true}}}]}}}}""", "")
+
+        s = self.observation._segments(segments_f=_f)
+        self.assertEqual(s, {'num_search_segments': 3, 't_optimize': None, 't_optimize_in_millis': None, 'num_committed_segments': 3})
+
+
+    def test_stats(self):
+        # TODO: do this, similar to test_segments
+        pass
+        
+
+    def test_run(self):
+        self.observation.run()
+        self.assertIsNotNone(self.observation.ts_start)
+        self.assertIsNotNone(self.observation.ts_stop)
+        self.assertEqual(20, len(self.conn.conn.requests))
+        q = json.loads(self.conn.conn.req[2])
+        self.assertEqual(
+            self.observation.queries[1].stats_group_name, 
+            json.loads(self.conn.conn.req[2])['stats'][0])
+
+    def test_record(self):
+        self.observation.run()
+        self.observation._stats = lambda: {}
+        self.observation._segments = lambda: {}
+        resp = self.observation.record()
+        data = json.loads(resp.data)
+        self.assertEqual(data['meta']['benchmark_id'], self.observation.benchmark_id)
+
+
 class BenchmarkTest(unittest.TestCase):
     pass
         
