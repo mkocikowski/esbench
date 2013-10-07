@@ -90,7 +90,7 @@ def main():
     args = args_parser().parse_args()
     cmnd = " ".join(sys.argv[1:])
     
-    loglevel = logging.INFO if not args.verbose else logging.DEBUG
+    loglevel = logging.DEBUG if args.verbose else logging.INFO
     logging.basicConfig(level=loglevel)
 
     with esbench.api.connect() as conn: 

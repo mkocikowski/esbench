@@ -132,6 +132,7 @@ class Observation(object):
         # we need to specifically ask for the stats groups we want, by name.
         stats_group_names = [q.stats_group_name for q in self.queries]
         resp = stats_f(self.conn, self.index, ",".join(stats_group_names))
+#         logger.debug("stats call: %s", resp.curl)
         stats = json.loads(resp.data)['indices'][self.index]['primaries']
 
         def _remove_obs_id(s): 
