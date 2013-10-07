@@ -6,9 +6,11 @@ import datetime
 import os.path
 import unittest
 import json
+import itertools
 
 import esbench.bench
 import esbench.api
+import esbench.client
 import esbench.test.test_api
 
 class BenchTest(unittest.TestCase):
@@ -106,6 +108,7 @@ class ObservationTest(unittest.TestCase):
             self.observation.queries[1].stats_group_name, 
             json.loads(self.conn.conn.req[2])['stats'][0])
 
+
     def test_record(self):
         self.observation.run()
         self.observation._stats = lambda: {}
@@ -115,11 +118,113 @@ class ObservationTest(unittest.TestCase):
         self.assertEqual(data['meta']['benchmark_id'], self.observation.benchmark_id)
 
 
-class BenchmarkTest(unittest.TestCase):
-    pass
-        
+class MockObservation(object):
 
+    def __init__(self, *args, **kwargs): 
+        self.did_run = False
+        self.did_record = False
+    
+    def run(self):
+        self.did_run = True
+    
+    def record(self):
+        self.did_record = True
+            
+
+class BenchmarkTest(unittest.TestCase):
+
+    def setUp(self):
+        self.conn = esbench.api.Conn(conn_cls=esbench.test.test_api.MockHTTPConnection)
+        self.cmnd = "run"
+        self.argv = esbench.client.args_parser().parse_args(self.cmnd.split())
+        self.bench = esbench.bench.Benchmark(self.cmnd, self.argv, self.conn)
+
+
+    def test_init(self):
+        pass        
+    
+    
+    def test_prepare(self):
+        self.assertIsNone(self.bench.ts_start)
+        self.assertIsNone(self.bench.t1)
+        self.bench.prepare()
+        self.assertIsNotNone(self.bench.ts_start)
+        self.assertIsNotNone(self.bench.t1)
+
+    
+    def test_load(self):
+        lines = ("line_%02i" % i for i in range(10))
+        counts = [self.bench.load(itertools.islice(lines, 10)) for _ in range(3)]
+        self.assertEqual(counts, [10, 0, 0])
+    
+    
+    def test_run(self):
         
+        self.obs_count = 0
+        def _obs(): 
+            self.obs_count += 1
+        
+        lines = ("line_%02i" % i for i in range(100))
+        self.bench.observe = _obs
+        self.bench.run(lines)
+        self.assertEqual(len(self.conn.conn.requests), 102)
+        self.assertEqual(self.conn.conn.requests[:3], [('DELETE', u'test', None), ('PUT', u'test', '{"mappings": {"doc": {"_size": {"enabled": true, "store": "yes"}, "properties": {"abstract": {"properties": {"txt": {"type": "string", "store": "yes"}}}}, "_source": {"enabled": true}}}, "settings": {"index": {"number_of_replicas": 0, "number_of_shards": 1}}}'), ('POST', u'test/doc', 'line_00')])
+        self.assertEqual(self.obs_count, 10)
+
+        self.obs_count = 0
+        self.conn = esbench.api.Conn(conn_cls=esbench.test.test_api.MockHTTPConnection)
+        self.cmnd = "run --append"
+        self.argv = esbench.client.args_parser().parse_args(self.cmnd.split())
+        self.bench = esbench.bench.Benchmark(self.cmnd, self.argv, self.conn)
+        lines = ("line_%02i" % i for i in range(100))
+        self.bench.observe = _obs
+        self.bench.run(lines)
+        self.assertEqual(len(self.conn.conn.requests), 100)
+        self.assertEqual(self.conn.conn.requests[:3], [('POST', u'test/doc', 'line_00'), ('POST', u'test/doc', 'line_01'), ('POST', u'test/doc', 'line_02')])
+        self.assertEqual(self.obs_count, 10)
+
+        self.obs_count = 0
+        self.conn = esbench.api.Conn(conn_cls=esbench.test.test_api.MockHTTPConnection)
+        self.cmnd = "run --append --observations 5"
+        self.argv = esbench.client.args_parser().parse_args(self.cmnd.split())
+        self.bench = esbench.bench.Benchmark(self.cmnd, self.argv, self.conn)
+        lines = ("line_%02i" % i for i in range(100))
+        self.bench.observe = _obs
+        self.bench.run(lines)
+        self.assertEqual(len(self.conn.conn.requests), 100)
+        self.assertEqual(self.conn.conn.requests[:3], [('POST', u'test/doc', 'line_00'), ('POST', u'test/doc', 'line_01'), ('POST', u'test/doc', 'line_02')])
+        self.assertEqual(self.obs_count, 5)
+
+        self.obs_count = 0
+        self.conn = esbench.api.Conn(conn_cls=esbench.test.test_api.MockHTTPConnection)
+        self.cmnd = "run --append --observations 5 20"
+        self.argv = esbench.client.args_parser().parse_args(self.cmnd.split())
+        self.bench = esbench.bench.Benchmark(self.cmnd, self.argv, self.conn)
+        lines = ("line_%02i" % i for i in range(20))
+        self.bench.observe = _obs
+        self.bench.run(lines)
+        self.assertEqual(len(self.conn.conn.requests), 20)
+        self.assertEqual(self.conn.conn.requests[:3], [('POST', u'test/doc', 'line_00'), ('POST', u'test/doc', 'line_01'), ('POST', u'test/doc', 'line_02')])
+        self.assertEqual(self.obs_count, 2)
+
+
+    def test_observe(self): 
+        obs = self.bench.observe(obs_cls=MockObservation)
+        self.assertEqual(self.conn.conn.requests, [('POST', u'test/_optimize?refresh=true&flush=true&wait_for_merge=true', None)])
+        self.assertTrue(obs.did_run)
+        self.assertTrue(obs.did_record)
+    
+    
+    def test_record(self):
+        # must call .prepare() first
+        self.assertRaises(TypeError, self.bench.record)
+        self.bench.prepare()
+        resp = self.bench.record()
+        data = json.loads(resp.data)
+        self.assertEqual(data['argv']['n'], 100)
+        # TODO: more tests?
+        
+    
 if __name__ == "__main__":
     unittest.main()     
 
