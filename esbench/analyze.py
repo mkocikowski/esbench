@@ -33,11 +33,36 @@ def observations(conn, benchmark_id):
         yield observation
 
 
-def flat(conn, ids=None):
-    for benchmark in benchmarks(conn, ids): 
-        for obs in observations(conn, benchmark['_id']): 
-            yield benchmark, obs
+def stats(conn, benchmark_ids=None):
+    for benchmark in benchmarks(conn, benchmark_ids): 
+        for observation in observations(conn, benchmark['_id']): 
+            groups = observation['_source']['stats']['search']['groups']
+            for name, group in groups.items():
+                yield benchmark, observation, (name, group)
 
+
+StatRecord = collections.namedtuple('StatRecord', 
+    ['bench_id', 'bench_name', 'obs_id', 'obs_no', 'doc_count', 'index_time', 'stat_name', 'stat_time_query', 'stat_time_fetch', 'stat_time_client'])
+    
+def stat_tuple(benchmark, observation, stat): 
+    record = StatRecord(
+            bench_id=benchmark['_id'], 
+            bench_name=benchmark['_source'].get('benchmark_name', 'unknown'), 
+            obs_id=observation['_id'], 
+            obs_no=observation['_source']['meta']['observation_sequence_no'],
+            doc_count=observation['_source']['stats']['docs']['count'], 
+            index_time=observation['_source']['stats']['indexing']['index_time_in_millis'],
+            stat_name=stat[0], 
+            stat_time_query=stat[1]['query_time_in_millis'], 
+            stat_time_fetch=stat[1]['fetch_time_in_millis'],
+            stat_time_client=stat[1]['client_time_in_millis'],
+    )
+    return record
+
+        
+def show_benchmarks(conn, ids=None, sample=1, format='JSON', indent=4):
+    for benchmark, observation, stat in stats(conn, ids):
+        print(stat_tuple(benchmark, observation, stat))
 
 
 def dump_benchmarks(conn, ids=None): 
@@ -63,54 +88,4 @@ def delete_benchmarks(conn, ids=None):
             path = "stats/bench/%s" % (benchmark['_id'], )
             conn.delete(path)
     return
-    
-
-# def analyze_benchmarks(conn, ids=None, step=1): 
-#     for benchmark in benchmarks(conn, ids): 
-#         seg_max = benchmark['_source']['argv']['segments'] if benchmark['_source']['argv']['segments'] else 'inf'
-#         obs_i = itertools.islice(observations(conn, benchmark['_id']), 0, None, step)
-#         r = [(
-#             d['_source']['stats']['docs']['count'],
-#             " ".join(["%s:%6sq%6sf%6sc" % (k, v['query_time_in_millis'], v['fetch_time_in_millis'], v['client_time_in_millis']) for k, v in sorted(d['_source']['stats']['search']['groups'].items())]), 
-#             d['_source']['segments']['num_search_segments'],
-#             seg_max,
-#             d['_source']['stats']['store']['size'],  
-#             d['_source']['segments']['t_optimize_in_millis'] / 1000.0 if d['_source']['segments']['t_optimize_in_millis'] else -1.0, 
-#             ) for d in obs_i]
-#         print("\nBenchmark: %s (%s), start: %s, total: %s \n" % (benchmark['_source'].get('benchmark_name', 'unknown'), benchmark['_id'], benchmark['_source']['benchmark_start'], benchmark['_source']['t_total'],))
-#         for t in r:
-#             print("N: %-6i %s SEG/MAX: %3i/%s SIZE: %8s OPT: %6.2f" % t)
-#         print("")
-#     return
-
-
-
-StatRecord = collections.namedtuple('StatRecord', 
-    ['bench_id', 'bench_name', 'obs_id', 'doc_count', 'stat_name', 'stat_time_query', 'stat_time_fetch', 'stat_time_client'])
-    
-def stats(benchmark, observation): 
-    groups = observation['_source']['stats']['search']['groups']
-    for name, group in groups.items(): 
-#         yield benchmark, observation, {name: group}
-        stat = StatRecord(
-                bench_id=benchmark['_id'], 
-                bench_name=benchmark['_source'].get('benchmark_name', 'unknown'), 
-                obs_id=observation['_id'],
-                doc_count=observation['_source']['stats']['docs']['count'], 
-                stat_name=name, 
-                stat_time_query=group['query_time_in_millis'], 
-                stat_time_fetch=group['fetch_time_in_millis'],
-                stat_time_client=group['client_time_in_millis'],
-        )
-        yield stat
-
-        
-
-def show_benchmarks(conn, ids=None, sample=1, format='JSON', indent=4):
-    for benchmark, observation in flat(conn, ids):
-        print(json.dumps({'benchmark': benchmark, 'observation': observation}, indent=indent, sort_keys=True))
-#         print([i[2] for i in stats(benchmark, observation)])
-        for stat in stats(benchmark, observation):
-#             print(json.dumps(stat))
-            print(json.dumps(stat.__dict__, indent=indent))
 
