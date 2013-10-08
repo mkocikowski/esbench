@@ -114,7 +114,7 @@ def main():
 #             benchmark.record()            
 
         elif args.command == 'show': 
-            esbench.analyze.analyze_benchmarks(conn, ids=args.ids, step=args.sample)
+            esbench.analyze.show_benchmarks(conn, ids=args.ids, sample=args.sample)
             
         elif args.command == 'dump':
             esbench.analyze.dump_benchmarks(conn, args.ids)
