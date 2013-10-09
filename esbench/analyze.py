@@ -7,6 +7,8 @@ import logging
 import json
 import collections
 
+import tabulate
+
 
 logger = logging.getLogger(__name__)
 
@@ -41,8 +43,20 @@ def stats(conn, benchmark_ids=None):
                 yield benchmark, observation, (name, group)
 
 
-StatRecord = collections.namedtuple('StatRecord', 
-    ['bench_id', 'bench_name', 'obs_id', 'obs_no', 'doc_count', 'index_time', 'stat_name', 'stat_time_query', 'stat_time_fetch', 'stat_time_client'])
+StatRecord = collections.namedtuple('StatRecord', [
+        'bench_id', 
+        'bench_name', 
+        'obs_id', 
+        'obs_no', 
+        'doc_cnt', 
+        'seg_cnt', 
+        't_index', 
+        'stat_name', 
+        't_query', 
+        't_fetch', 
+        't_client', 
+    ]
+)
     
 def stat_tuple(benchmark, observation, stat): 
     record = StatRecord(
@@ -50,19 +64,22 @@ def stat_tuple(benchmark, observation, stat):
             bench_name=benchmark['_source'].get('benchmark_name', 'unknown'), 
             obs_id=observation['_id'], 
             obs_no=observation['_source']['meta']['observation_sequence_no'],
-            doc_count=observation['_source']['stats']['docs']['count'], 
-            index_time=observation['_source']['stats']['indexing']['index_time_in_millis'],
+            doc_cnt=observation['_source']['stats']['docs']['count'], 
+            seg_cnt=observation['_source']['segments']['num_search_segments'], 
+            t_index=observation['_source']['stats']['indexing']['index_time_in_millis'],
             stat_name=stat[0], 
-            stat_time_query=stat[1]['query_time_in_millis'], 
-            stat_time_fetch=stat[1]['fetch_time_in_millis'],
-            stat_time_client=stat[1]['client_time_in_millis'],
+            t_query=float(stat[1]['query_time_in_millis'])/float(stat[1]['query_total']), 
+            t_fetch=float(stat[1]['fetch_time_in_millis'])/float(stat[1]['fetch_total']),
+            t_client=float(stat[1]['client_time_in_millis'])/float(stat[1]['client_total']),
     )
     return record
 
-        
 def show_benchmarks(conn, ids=None, sample=1, format='JSON', indent=4):
-    for benchmark, observation, stat in stats(conn, ids):
-        print(stat_tuple(benchmark, observation, stat))
+    data = [stat_tuple(benchmark, observation, stat) for benchmark, observation, stat in stats(conn, ids)]
+    data = sorted(data, key=lambda stat: (stat.bench_id, stat.stat_name, stat.obs_no))
+    print(tabulate.tabulate(data, headers=data[0]._fields))
+#     print(tabulate.tabulate(data, headers='keys'))
+    
 
 
 def dump_benchmarks(conn, ids=None): 

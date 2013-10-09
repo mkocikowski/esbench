@@ -49,6 +49,7 @@ class SearchQuery(object):
         self.observation_id = observation_id        
         self.name = name
         self.query = dict(query)
+        self.execution_count = 0 # how many times it has been executed
         self.stats_group_name = "%s_%s" % (self.observation_id, self.name)
         self.query['stats'] = [self.stats_group_name]
         
@@ -62,6 +63,7 @@ class SearchQuery(object):
         
         qs = self.query_string % {'variable': rands(6)}
         resp = conn.post(self.query_path, qs)
+        self.execution_count += 1
         return resp
 
 
@@ -144,6 +146,7 @@ class Observation(object):
         }
 
         for query in self.queries: 
+            stats['search']['groups'][query.name]['client_total'] = query.execution_count
             stats['search']['groups'][query.name]['client_time'] = "%.2fs" % (query.t_client, ) if query.t_client else None
             stats['search']['groups'][query.name]['client_time_in_millis'] = int(query.t_client * 1000.0) if query.t_client else None
 

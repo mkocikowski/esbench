@@ -22,6 +22,7 @@ setup(
     url = 'https://github.com/mkocikowski/esbench', 
     description = 'Elasticsearch benchmarking tool', 
     long_description = ld,
+    install_requires = ['tabulate >= 0.6', ]
     packages = ['esbench', 'esbench.test'], 
     package_data = {
         '': ['README.md'], 
