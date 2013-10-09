@@ -7,6 +7,8 @@ import logging
 import json
 import collections
 
+import tabulate
+
 
 logger = logging.getLogger(__name__)
 
@@ -72,14 +74,12 @@ def stat_tuple(benchmark, observation, stat):
     )
     return record
 
-import tabulate
 def show_benchmarks(conn, ids=None, sample=1, format='JSON', indent=4):
     data = [stat_tuple(benchmark, observation, stat) for benchmark, observation, stat in stats(conn, ids)]
     data = sorted(data, key=lambda stat: (stat.bench_id, stat.stat_name, stat.obs_no))
     print(tabulate.tabulate(data, headers=data[0]._fields))
-
-#     for benchmark, observation, stat in stats(conn, ids):
-#         print(list(stat_tuple(benchmark, observation, stat)))
+#     print(tabulate.tabulate(data, headers='keys'))
+    
 
 
 def dump_benchmarks(conn, ids=None): 
