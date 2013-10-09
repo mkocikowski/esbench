@@ -46,7 +46,7 @@ class SearchQueryTest(unittest.TestCase):
         c = esbench.api.Conn(conn_cls=esbench.test.test_api.MockHTTPConnection)
         resp = q.execute(c)
         self.assertEqual(resp.curl, """curl -XPOST http://localhost:9200/test/doc/_search -d \'{"match": {"foo": "bar"}, "stats": ["ABCDEFGH_match"]}\'""")
-
+        self.assertEqual(1, q.execution_count)
 
 
 class ObservationTest(unittest.TestCase): 
@@ -95,6 +95,7 @@ class ObservationTest(unittest.TestCase):
         s = self.observation._stats(stats_f=_f)
         self.assertEqual(s['docs']['count'], 100)
         self.assertIsNone(s['search']['groups']['mlt']['client_time'])
+        self.assertEqual(0, s['search']['groups']['mlt']['client_total'])
         self.assertEqual(s['store']['size_in_bytes'], 3024230)
         
 
@@ -103,6 +104,7 @@ class ObservationTest(unittest.TestCase):
         self.assertIsNotNone(self.observation.ts_start)
         self.assertIsNotNone(self.observation.ts_stop)
         self.assertEqual(20, len(self.conn.conn.requests))
+        self.assertEqual(10, self.observation.queries[0].execution_count)
         q = json.loads(self.conn.conn.req[2])
         self.assertEqual(
             self.observation.queries[1].stats_group_name, 
