@@ -1,8 +1,16 @@
+WARNING
+=======
+This is not fit for public consumption yet! I'm putting this on github for my
+own convenience, not to share with people yet.
+
+
 Elasticsearch benchmarking tools
 --------------------------------
-
-This is not fit for public consumption yet! I'm putting this on github for my
-own convenience, not to share with people yet. 
+'esbench' is a set of python scripts for benchmarking Elasticsearch. The two
+primary uses are for capacity planning (guessing how much oomph you need to do
+what what you think you need to do), and for performance tuning (trying out
+various index, mapping, and query settings in a consistent and reproducible
+manner). 
 
 Installation
 ------------
