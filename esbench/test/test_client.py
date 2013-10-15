@@ -29,8 +29,7 @@ class ClientTest(unittest.TestCase):
                 'observations': 10, 
                 'data': None, 
                 'append': False, 
-#                 'config_file_path': os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "../", "config.json")),
-                'config_file_path': args.config_file_path, # cheating
+                'config_file_path': os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "../", "config.json")),
             }
         )
     
