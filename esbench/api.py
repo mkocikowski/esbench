@@ -110,7 +110,8 @@ class Conn(object):
         resp = self.conn.getresponse()
         data = resp.read()
         if resp.status not in [200, 201]:
-            logger.warning((resp.status, path))
+#             logger.warning((resp.status, path))
+            pass
         return ApiResponse(resp.status, resp.reason, data, curl)
 
 
