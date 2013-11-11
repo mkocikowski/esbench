@@ -23,7 +23,7 @@ def benchmarks(conn, ids=None):
             else:
                 yield benchmark
     except KeyError:
-        logger.error("no benchmarks found", exc_info=True)
+        logger.error("no benchmarks found", exc_info=False)
     return
     
 
@@ -77,7 +77,8 @@ def stat_tuple(benchmark, observation, stat):
 def show_benchmarks(conn, ids=None, sample=1, format='JSON', indent=4):
     data = [stat_tuple(benchmark, observation, stat) for benchmark, observation, stat in stats(conn, ids)]
     data = sorted(data, key=lambda stat: (stat.bench_id, stat.stat_name, stat.obs_no))
-    print(tabulate.tabulate(data, headers=data[0]._fields))
+    if data: 
+        print(tabulate.tabulate(data, headers=data[0]._fields))
 #     print(tabulate.tabulate(data, headers='keys'))
     
 
