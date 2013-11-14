@@ -58,6 +58,17 @@
 			"size": 10
 		}, 
 
+		"match_no_rnd": {
+			"fields": ["description.txt"], 
+			"from": 0, 
+			"query": {
+				"match": {
+					"description.txt": "computing device portable"
+				}
+			}, 
+			"size": 10
+		}, 
+
 		"match_abs": {
 			"fields": ["abstract.txt"], 
 			"from": 0, 

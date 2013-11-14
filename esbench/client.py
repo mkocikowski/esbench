@@ -102,7 +102,7 @@ def main():
                 for _ in range(args.observations):
                     benchmark.observe()            
             else:
-                with get_lines_iterator(args.data, args.n) as lines: 
+                with get_lines_iterator(path=args.data, count=args.n) as lines: 
                     benchmark.run(lines)
             benchmark.record()
 

@@ -40,9 +40,12 @@ def download(url, tmpd="/tmp"):
         
     fn = os.path.basename(url)
     fn = os.path.abspath(os.path.join(tmpd, fn))
+        
+    logger.info("Downloading '%s' to '%s'", url, fn)
     
     # if the file already exists, don't download it again
     if os.path.exists(fn): 
+        logger.info("Using cached file '%s'", fn)
         return fn
     
     resp = urllib2.urlopen(url)
@@ -53,6 +56,8 @@ def download(url, tmpd="/tmp"):
             f.write(chunk)
             chunk = resp.read(2**16)
             sys.stderr.write(".")
+
+    logger.info("finished downloading '%s'", fn)
 
     resp.close()
     return fn
@@ -72,9 +77,13 @@ def feed(nocache=False):
         try: 
             for line in unzip(fn): 
                 yield line 
+        except IOError: 
+            logger.error("IOError reading file: '%s'. Looks like the cached data file is corrupted, it will now be removed, and downloaded again on the next test run. Moving on to the next data file - this error will not affect the test run.", fn)
+            nocache = True # this will remove the file in finally clause
         finally:
             if nocache:
                 os.remove(fn)
+                logger.info("removed file '%s'", fn)
 
 
 def args_parser():
