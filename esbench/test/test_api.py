@@ -29,6 +29,7 @@ class MockHTTPResponse(object):
     
 
 class MockHTTPConnection(object):
+    """Mock httplib.HTTPConnection"""
 
     def __init__(self, host='localhost', port=9200, timeout=10): 
         self.host = host
