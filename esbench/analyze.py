@@ -50,15 +50,19 @@ StatRecord = collections.namedtuple('StatRecord', [
         'obs_no', 
         'doc_cnt', 
         'seg_cnt', 
-        't_index', 
-        'stat_name', 
-        't_query', 
-        't_fetch', 
-        't_client', 
+        't_index_ms', 
+        'query_name', 
+        'n_query', 
+        't_query_ms', 
+        'n_fetch', 
+        't_fetch_ms', 
+        'n_client', 
+        't_client_ms', 
     ]
 )
     
 def stat_tuple(benchmark, observation, stat): 
+    stat_name, stat_data = stat
     record = StatRecord(
             bench_id=benchmark['_id'], 
             bench_name=benchmark['_source'].get('benchmark_name', 'unknown'), 
@@ -66,17 +70,23 @@ def stat_tuple(benchmark, observation, stat):
             obs_no=observation['_source']['meta']['observation_sequence_no'],
             doc_cnt=observation['_source']['stats']['docs']['count'], 
             seg_cnt=observation['_source']['segments']['num_search_segments'], 
-            t_index=observation['_source']['stats']['indexing']['index_time_in_millis'],
-            stat_name=stat[0], 
-            t_query=float(stat[1]['query_time_in_millis'])/float(stat[1]['query_total']), 
-            t_fetch=float(stat[1]['fetch_time_in_millis'])/float(stat[1]['fetch_total']),
-            t_client=float(stat[1]['client_time_in_millis'])/float(stat[1]['client_total']),
+            t_index_ms=observation['_source']['stats']['indexing']['index_time_in_millis'],
+            query_name=stat_name, 
+#             t_query=float(stat_data['query_time_in_millis'])/float(stat_data['query_total']), 
+#             t_fetch=float(stat_data['fetch_time_in_millis'])/float(stat_data['fetch_total']),
+#             t_client=float(stat_data['client_time_in_millis'])/float(stat_data['client_total']), 
+            n_query=stat_data['query_total'], 
+            n_fetch=stat_data['fetch_total'], 
+            n_client=stat_data['client_total'], 
+            t_query_ms=stat_data['query_time_in_millis'], 
+            t_fetch_ms=stat_data['fetch_time_in_millis'],
+            t_client_ms=stat_data['client_time_in_millis'],
     )
     return record
 
 def show_benchmarks(conn, ids=None, sample=1, format='JSON', indent=4):
     data = [stat_tuple(benchmark, observation, stat) for benchmark, observation, stat in stats(conn, ids)]
-    data = sorted(data, key=lambda stat: (stat.bench_id, stat.stat_name, stat.obs_no))
+    data = sorted(data, key=lambda stat: (stat.bench_id, stat.query_name, stat.obs_no))
     if data: 
         print(tabulate.tabulate(data, headers=data[0]._fields))
 #     print(tabulate.tabulate(data, headers='keys'))
