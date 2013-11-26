@@ -6,6 +6,9 @@
 import sys
 import os.path
 import unittest
+import logging
+
+logging.basicConfig(level=logging.CRITICAL)
 
 
 def suite():

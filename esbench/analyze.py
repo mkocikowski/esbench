@@ -12,9 +12,13 @@ import tabulate
 
 logger = logging.getLogger(__name__)
 
-def benchmarks(conn, ids=None):
+
+def _get_benchmarks(conn):
     path = "stats/bench/_search?sort=benchmark_start:asc&size=100"
     resp = conn.get(path)
+    return resp
+
+def benchmarks(resp, ids=None):
     data = json.loads(resp.data)
     try:
         for benchmark in data['hits']['hits']:
@@ -27,17 +31,20 @@ def benchmarks(conn, ids=None):
     return
 
 
-def observations(conn, benchmark_id):
+def _get_observations(conn, benchmark_id):
     path = "stats/obs/_search?q=meta.benchmark_id:%s&sort=meta.observation_start:asc&size=10000" % (benchmark_id, )
     resp = conn.get(path)
+    return resp
+
+def observations(resp):
     data = json.loads(resp.data)
     for observation in data['hits']['hits']:
         yield observation
 
 
 def stats(conn, benchmark_ids=None):
-    for benchmark in benchmarks(conn, benchmark_ids):
-        for observation in observations(conn, benchmark['_id']):
+    for benchmark in benchmarks(_get_benchmarks(conn), ids=benchmark_ids):
+        for observation in observations(_get_observations(conn, benchmark['_id'])):
             # each observation contains stats groups - here referred to as
             # 'groups' which record information on each of the queries which
             # form part of the benchmark. a stats group in context (number of
@@ -67,6 +74,7 @@ StatRecord = collections.namedtuple('StatRecord', [
     ]
 )
 
+
 def stat_tuple(benchmark, observation, stat):
     stat_name, stat_data = stat
     record = StatRecord(
@@ -88,16 +96,27 @@ def stat_tuple(benchmark, observation, stat):
     )
     return record
 
-def show_benchmarks(conn, ids=None, sample=1, format='JSON', indent=4):
-    data = [stat_tuple(benchmark, observation, stat) for benchmark, observation, stat in stats(conn, ids)]
-    data = sorted(data, key=lambda stat: (stat.bench_id, stat.query_name, stat.obs_no))
+
+def get_stat_tuples(conn, benchmark_ids=None, sort_f=lambda stat: (stat.bench_id, stat.query_name, stat.obs_no)):
+    # set sort_f to None to not sort
+    data = [stat_tuple(benchmark, observation, stat) for benchmark, observation, stat in stats(conn, benchmark_ids)]
+    data = sorted(data, key=sort_f)
+    return data
+
+
+
+def show_benchmarks(conn, benchmark_ids=None, sample=1, format='tab', indent=4):
+    data = get_stat_tuples(conn, benchmark_ids)
     if data:
         print(tabulate.tabulate(data, headers=data[0]._fields))
-#     print(tabulate.tabulate(data, headers='keys'))
-
 
 
 def dump_benchmarks(conn, ids=None):
+    """Dump benchmark data as a sequence of curl calls.
+
+    You can save these calls to a file, and then replay them somewhere else.
+    """
+
     for benchmark in benchmarks(conn, ids):
         curl = """curl -XPUT 'http://localhost:9200/stats/bench/%s' -d '%s'""" % (benchmark['_id'], json.dumps(benchmark['_source']))
         print(curl)

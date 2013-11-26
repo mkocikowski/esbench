@@ -22,15 +22,15 @@ logger = logging.getLogger(__name__)
 def get_lines_iterator(path=None, count=None):
 
     infile = None
-    if path: 
+    if path:
         infile = open(path, 'rU')
         # if count is None, iterate through all elements
         lines = itertools.islice(infile, count)
     else:
         lines = itertools.islice(esbench.data.feed(), count)
-    
+
     yield lines
-    
+
     if infile:
         infile.close()
 
@@ -68,6 +68,7 @@ def args_parser():
     parser_show = subparsers.add_parser('show', help='show data from recorded benchmarks')
     parser_show.add_argument('-v', '--verbose', action='store_true')
     parser_show.add_argument('--sample', metavar='N', type=int, default=1, help='sample every Nth observation; (%(default)i)')
+    parser_show.add_argument('--format', choices=['tab', 'json', 'csv', 'svg'], default='tab', help='(%(default)s)')
     parser_show.add_argument('ids', nargs='*')
 
 #     parser_list = subparsers.add_parser('list', help='list recorded benchmarks')
@@ -89,37 +90,37 @@ def main():
 
     args = args_parser().parse_args()
     cmnd = " ".join(sys.argv[1:])
-    
+
     loglevel = logging.DEBUG if args.verbose else logging.INFO
     logging.basicConfig(level=loglevel)
 
-    with esbench.api.connect() as conn: 
+    with esbench.api.connect() as conn:
 
-        if args.command == 'run':         
+        if args.command == 'run':
             benchmark = esbench.bench.Benchmark(cmnd, args, conn)
             benchmark.prepare()
-            if args.no_load: 
+            if args.no_load:
                 for _ in range(args.observations):
-                    benchmark.observe()            
+                    benchmark.observe()
             else:
-                with get_lines_iterator(path=args.data, count=args.n) as lines: 
+                with get_lines_iterator(path=args.data, count=args.n) as lines:
                     benchmark.run(lines)
             benchmark.record()
 
-#         elif args.command == 'observe': 
+#         elif args.command == 'observe':
 #             benchmark = esbench.bench.Benchmark(cmnd, args, conn)
 #             benchmark.prepare()
 #             for _ in range(args.n):
 #                 benchmark.observe()
-#             benchmark.record()            
+#             benchmark.record()
 
-        elif args.command == 'show': 
-            esbench.analyze.show_benchmarks(conn, ids=args.ids, sample=args.sample)
-            
+        elif args.command == 'show':
+            esbench.analyze.show_benchmarks(conn, benchmark_ids=args.ids, sample=args.sample, format=args.format)
+
         elif args.command == 'dump':
             esbench.analyze.dump_benchmarks(conn, args.ids)
-            
-        elif args.command == 'clear': 
+
+        elif args.command == 'clear':
             esbench.analyze.delete_benchmarks(conn, args.ids)
 
 
