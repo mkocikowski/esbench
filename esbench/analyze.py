@@ -15,16 +15,16 @@ import esbench
 logger = logging.getLogger(__name__)
 
 
-def _get_benchmarks(conn, stats_index_name=esbench.STATS_INDEX_NAME):
+def _get_benchmarks(conn=None, stats_index_name=esbench.STATS_INDEX_NAME):
     path = "%s/bench/_search?sort=benchmark_start:asc&size=100" % (stats_index_name, )
     resp = conn.get(path)
     return resp
 
-def benchmarks(resp, ids=None):
+def benchmarks(resp, benchmark_ids=None):
     data = json.loads(resp.data)
     try:
         for benchmark in data['hits']['hits']:
-            if ids and not benchmark['_id'] in ids:
+            if benchmark_ids and not benchmark['_id'] in benchmark_ids:
                 continue
             else:
                 yield benchmark
@@ -45,7 +45,7 @@ def observations(resp):
 
 
 def stats(conn, benchmark_ids=None):
-    for benchmark in benchmarks(_get_benchmarks(conn), ids=benchmark_ids):
+    for benchmark in benchmarks(_get_benchmarks(conn), benchmark_ids=benchmark_ids):
         for observation in observations(_get_observations(conn, benchmark['_id'])):
             # each observation contains stats groups - here referred to as
             # 'groups' which record information on each of the queries which
@@ -113,32 +113,36 @@ def show_benchmarks(conn, benchmark_ids=None, sample=1, format='tab', indent=4):
         print(tabulate.tabulate(data, headers=data[0]._fields))
 
 
-def dump_benchmarks(conn, ids=None):
+def dump_benchmarks(conn=None, ids=None, stats_index_name=esbench.STATS_INDEX_NAME):
     """Dump benchmark data as a sequence of curl calls.
 
     You can save these calls to a file, and then replay them somewhere else.
     """
 
     for benchmark in benchmarks(conn, ids):
-        curl = """curl -XPUT 'http://localhost:9200/stats/bench/%s' -d '%s'""" % (benchmark['_id'], json.dumps(benchmark['_source']))
+        curl = """curl -XPUT 'http://localhost:9200/%s/bench/%s' -d '%s'""" % (stats_index_name, benchmark['_id'], json.dumps(benchmark['_source']))
         print(curl)
         for o in observations(conn, benchmark['_id']):
-            curl = """curl -XPUT 'http://localhost:9200/stats/obs/%s' -d '%s'""" % (o['_id'], json.dumps(o['_source']))
+            curl = """curl -XPUT 'http://localhost:9200/%s/obs/%s' -d '%s'""" % (stats_index_name, o['_id'], json.dumps(o['_source']))
             print(curl)
     return
 
 
-def delete_benchmarks(conn, ids=None):
-    if not ids:
-        path = "stats"
-        resp = conn.delete(path)
+def delete_benchmarks(conn=None, benchmark_ids=None, stats_index_name=esbench.STATS_INDEX_NAME):
+
+    if not benchmark_ids:
+        resp = conn.delete(stats_index_name)
         logger.info(resp.curl)
+
     else:
-        for benchmark in benchmarks(conn, ids):
-            for o in observations(conn, benchmark['_id']):
-                path = "stats/obs/%s" % (o['_id'], )
-                conn.delete(path)
-            path = "stats/bench/%s" % (benchmark['_id'], )
-            conn.delete(path)
+        for benchmark in benchmarks(_get_benchmarks(conn, stats_index_name=stats_index_name), benchmark_ids=benchmark_ids):
+            for observation in observations(_get_observations(conn, benchmark_id=benchmark['_id'], stats_index_name=stats_index_name)):
+                path = "%s/obs/%s" % (stats_index_name, observation['_id'], )
+                resp = conn.delete(path)
+                logger.info(resp.curl)
+            path = "%s/bench/%s" % (stats_index_name, benchmark['_id'], )
+            resp = conn.delete(path)
+            logger.info(resp.curl)
+
     return
 
