@@ -97,7 +97,7 @@ def main():
     with esbench.api.connect() as conn:
 
         if args.command == 'run':
-            benchmark = esbench.bench.Benchmark(cmnd, args, conn)
+            benchmark = esbench.bench.Benchmark(cmnd=cmnd, argv=args, conn=conn, stats_index_name=esbench.STATS_INDEX_NAME)
             benchmark.prepare()
             if args.no_load:
                 for _ in range(args.observations):

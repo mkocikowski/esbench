@@ -9,12 +9,14 @@ import collections
 
 import tabulate
 
+import esbench
+
 
 logger = logging.getLogger(__name__)
 
 
-def _get_benchmarks(conn):
-    path = "stats/bench/_search?sort=benchmark_start:asc&size=100"
+def _get_benchmarks(conn, stats_index_name=esbench.STATS_INDEX_NAME):
+    path = "%s/bench/_search?sort=benchmark_start:asc&size=100" % (stats_index_name, )
     resp = conn.get(path)
     return resp
 
@@ -31,8 +33,8 @@ def benchmarks(resp, ids=None):
     return
 
 
-def _get_observations(conn, benchmark_id):
-    path = "stats/obs/_search?q=meta.benchmark_id:%s&sort=meta.observation_start:asc&size=10000" % (benchmark_id, )
+def _get_observations(conn, benchmark_id, stats_index_name=esbench.STATS_INDEX_NAME):
+    path = "%s/obs/_search?q=meta.benchmark_id:%s&sort=meta.observation_start:asc&size=10000" % (stats_index_name, benchmark_id, )
     resp = conn.get(path)
     return resp
 

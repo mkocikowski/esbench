@@ -20,7 +20,7 @@ class AnalyzeTest(unittest.TestCase):
     def test_get_benchmarks(self):
         conn = esbench.api.Conn(conn_cls=esbench.test.test_api.MockHTTPConnection)
         resp = esbench.analyze._get_benchmarks(conn)
-        self.assertEqual(resp.curl, 'curl -XGET http://localhost:9200/stats/bench/_search?sort=benchmark_start:asc&size=100')
+        self.assertEqual(resp.curl, 'curl -XGET http://localhost:9200/%s/bench/_search?sort=benchmark_start:asc&size=100' % esbench.STATS_INDEX_NAME)
 
 
     def test_benchmarks(self):
@@ -36,7 +36,7 @@ class AnalyzeTest(unittest.TestCase):
     def test_get_observations(self):
         conn = esbench.api.Conn(conn_cls=esbench.test.test_api.MockHTTPConnection)
         resp = esbench.analyze._get_observations(conn, benchmark_id='foo')
-        self.assertEqual(resp.curl, 'curl -XGET http://localhost:9200/stats/obs/_search?q=meta.benchmark_id:foo&sort=meta.observation_start:asc&size=10000')
+        self.assertEqual(resp.curl, 'curl -XGET http://localhost:9200/%s/obs/_search?q=meta.benchmark_id:foo&sort=meta.observation_start:asc&size=10000' % (esbench.STATS_INDEX_NAME, ))
 
 
     def test_observations(self):

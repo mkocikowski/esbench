@@ -3,3 +3,6 @@
 # https://github.com/mkocikowski/esbench
 
 __version__ = "0.0.6"
+
+STATS_INDEX_NAME = 'esbench_stats'
+
