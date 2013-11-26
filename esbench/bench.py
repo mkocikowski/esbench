@@ -256,6 +256,9 @@ class Benchmark(object):
 
     def run(self, lines):
 
+        index_settings = {"settings" : {"index" : {"number_of_shards" : 1, "number_of_replicas" : 0}}}
+        esbench.api.index_create(self.conn, self.stats_index_name, index_settings)
+
         if not self.argv.append:
             esbench.api.index_delete(self.conn, self.doc_index_name)
             esbench.api.index_create(self.conn, self.doc_index_name, self.config['index'])
@@ -275,9 +278,6 @@ class Benchmark(object):
 
         self.ts_stop = timestamp()
         self.t_total = time.time() - self.t1
-
-#         index_settings = {"settings" : {"index" : {"number_of_shards" : 1, "number_of_replicas" : 0}}}
-#         esbench.api.index_create(self.conn, self.stats_index_name, index_settings)
 
         stat = {
             'benchmark_id': self.benchmark_id,
