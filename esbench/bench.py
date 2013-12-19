@@ -143,7 +143,7 @@ class Observation(object):
         # we need to specifically ask for the stats groups we want, by name.
         stats_group_names = [q.stats_group_name for q in self.queries]
         resp = stats_f(self.conn, self.doc_index_name, ",".join(stats_group_names))
-#         logger.debug("stats call: %s", resp.curl)
+        logger.debug("stats call: %s", resp.curl)
         stats = json.loads(resp.data)['indices'][self.doc_index_name]['primaries']
 
         def _remove_obs_id(s):
@@ -176,7 +176,6 @@ class Observation(object):
             'stats': self._stats(),
         }
 
-#         print(json.dumps(obs, indent=4, sort_keys=True))
         data = json.dumps(obs, sort_keys=True)
         path = '%s/obs/%s' % (self.stats_index_name, self.observation_id, )
         resp = self.conn.put(path, data)

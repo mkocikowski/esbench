@@ -69,7 +69,7 @@ class Conn(object):
         resp = self.conn.getresponse()
         data = resp.read()
         if resp.status not in [200, 201]:
-            logger.warning((resp.status, path))
+            logger.debug((resp.status, path, curl[:50]))
         return ApiResponse(resp.status, resp.reason, data, curl)
     
     @retry_and_reconnect_on_IOError
@@ -83,7 +83,7 @@ class Conn(object):
         resp = self.conn.getresponse()
         data = resp.read()
         if resp.status not in [200, 201]:
-            logger.warning((resp.status, path))
+            logger.debug((resp.status, path, curl[:50]))
         return ApiResponse(resp.status, resp.reason, data, curl)
 
     @retry_and_reconnect_on_IOError
@@ -99,7 +99,7 @@ class Conn(object):
         resp = self.conn.getresponse()
         data = resp.read()
         if resp.status not in [200, 201]:
-            logger.warning((resp.status, path))
+            logger.debug((resp.status, path, curl[:50]))
         return ApiResponse(resp.status, resp.reason, data, curl)
 
     @retry_and_reconnect_on_IOError
@@ -110,8 +110,7 @@ class Conn(object):
         resp = self.conn.getresponse()
         data = resp.read()
         if resp.status not in [200, 201]:
-#             logger.warning((resp.status, path))
-            pass
+            logger.debug((resp.status, path, curl[:50]))
         return ApiResponse(resp.status, resp.reason, data, curl)
 
 

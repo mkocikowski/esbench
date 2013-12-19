@@ -18,21 +18,21 @@ import esbench.bench
 
 logger = logging.getLogger(__name__)
 
-@contextlib.contextmanager
-def get_lines_iterator(path=None, count=None):
-
-    infile = None
-    if path:
-        infile = open(path, 'rU')
-        # if count is None, iterate through all elements
-        lines = itertools.islice(infile, count)
-    else:
-        lines = itertools.islice(esbench.data.get_data(), count)
-
-    yield lines
-
-    if infile:
-        infile.close()
+# @contextlib.contextmanager
+# def get_lines_iterator(path=None, count=None):
+# 
+#     infile = None
+#     if path:
+#         infile = open(path, 'rU')
+#         # if count is None, iterate through all elements
+#         lines = itertools.islice(infile, count)
+#     else:
+#         lines = itertools.islice(esbench.data.get_data(), count)
+# 
+#     yield lines
+# 
+#     if infile:
+#         infile.close()
 
 
 def args_parser():
@@ -48,33 +48,19 @@ def args_parser():
     parser_run.add_argument('--observations', metavar='N', type=int, default=10, help='run n observations; (%(default)i)')
     parser_run.add_argument('--segments', type=int, metavar='N', default=None, help='max_num_segments for optimize calls; (%(default)s)')
     parser_run.add_argument('--repetitions', metavar='N', type=int, default=100, help='run each query n times per observation; (%(default)i)')
-#     parser_run.add_argument('--refresh', type=str, metavar='T', default='1s', help="'refresh_interval' for the index, '-1' for none; (%(default)s)")
     parser_run.add_argument('--no-load', action='store_true', help="if set, do not load data, just run observations")
     parser_run.add_argument('--no-optimize-calls', action='store_true', help="if set, do not optimize before observations")
     parser_run.add_argument('--config-file-path', metavar='', type=str, default='%s/config.json' % (os.path.dirname(os.path.abspath(__file__)), ), help="path to json config file; (%(default)s)")
     parser_run.add_argument('--name', type=str, action='store', default="%s::%s" % (socket.gethostname(), esbench.bench.timestamp()), help="human readable name of the benchmark; (%(default)s)")
     parser_run.add_argument('--append', action='store_true', help="if set, append data to the index; (%(default)s)")
     parser_run.add_argument('--data', metavar='PATH', type=str, action='store', default=None, help="read data from PATH; set to /dev/stdin to read from stdin. Set this only if you want to provide your own data, by default US Patent Application data will be used; (%(default)s)")
-#     parser_run.add_argument('n', nargs="?", type=int, default=100, help='number of documents; (%(default)i)')
-    parser_run.add_argument('maxsize', nargs="?", type=str, default='1mb', help="max size of the index, as either the number of documents (int) or byte size (int + 'kb'/'mb'/'gb'); (%(default)s)")
-
-
-#     parser_observe = subparsers.add_parser('observe', help='run an observation (no data loading)')
-#     parser_observe.set_defaults(no_optimize_calls=True, segments=None)
-#     parser_observe.add_argument('-v', '--verbose', action='store_true')
-#     parser_observe.add_argument('--repetitions', metavar='N', type=int, default=1000, help='run each query n times per observation; (%(default)i)')
-#     parser_observe.add_argument('--config-file-path', metavar='', type=str, default='./config.json', help="path to json config file; (%(default)s)")
-#     parser_observe.add_argument('n', nargs="?", type=int, default=1, help='number of observations; (%(default)i)')
+    parser_run.add_argument('maxsize', nargs="?", type=str, default='1mb', help="max size of the index, as either the number of documents or byte size. To index 100 documents, set it to 100; to index 1gb of documents, set it to 1gb. When setting the byte size of data, best effort will be made to run observations at even intervals, and the index bytesize will be ballpark, not the exact figure you specified; (%(default)s)")
 
     parser_show = subparsers.add_parser('show', help='show data from recorded benchmarks')
     parser_show.add_argument('-v', '--verbose', action='store_true')
     parser_show.add_argument('--sample', metavar='N', type=int, default=1, help='sample every Nth observation; (%(default)i)')
     parser_show.add_argument('--format', choices=['tab', 'json', 'csv', 'svg'], default='tab', help='(%(default)s)')
     parser_show.add_argument('ids', nargs='*')
-
-#     parser_list = subparsers.add_parser('list', help='list recorded benchmarks')
-#     parser_list.add_argument('-v', '--verbose', action='store_true')
-#     parser_list.add_argument('ids', nargs='*', help='optional list of benchmark ids, empty list means all; (%(default)s)')
 
     parser_clear = subparsers.add_parser('clear', help='clear recorded benchmarks')
     parser_clear.add_argument('-v', '--verbose', action='store_true')
@@ -98,6 +84,7 @@ def parse_maxsize(value):
         max_n = 0
         orders = {'kb': 10, 'mb': 20, 'gb': 30, 'tb': 40}
         max_byte_size = int(value[:-2]) << orders[value[-2:].lower()]
+    logger.debug("Parsed maxsize; max_n: %i, max_byte_size: %i", max_n, max_byte_size)
     return max_n, max_byte_size
 
 
@@ -106,8 +93,10 @@ def main():
     args = args_parser().parse_args()
     cmnd = " ".join(sys.argv[1:])
 
-    loglevel = logging.DEBUG if args.verbose else logging.INFO
-    logging.basicConfig(level=loglevel)
+    if args.verbose: 
+        logging.basicConfig(level=logging.DEBUG, format='%(asctime)s %(process)d %(name)s %(funcName)s:%(lineno)d %(levelname)s %(message)s')
+    else:
+        logging.basicConfig(level=logging.INFO)
 
     with esbench.api.connect() as conn:
 
@@ -125,16 +114,7 @@ def main():
                     batches = esbench.data.batches_iterator(lines=feed, batch_count=args.observations, max_n=max_n, max_byte_size=max_byte_size)
                     benchmark.run(batches)
 
-
-
             benchmark.record()
-
-#         elif args.command == 'observe':
-#             benchmark = esbench.bench.Benchmark(cmnd, args, conn)
-#             benchmark.prepare()
-#             for _ in range(args.n):
-#                 benchmark.observe()
-#             benchmark.record()
 
         elif args.command == 'show':
             esbench.analyze.show_benchmarks(conn, benchmark_ids=args.ids, sample=args.sample, format=args.format)
