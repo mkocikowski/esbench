@@ -156,9 +156,9 @@ class BenchmarkTest(unittest.TestCase):
 
 
     def test_load(self):
-        lines = ("line_%02i" % i for i in range(10))
+        lines = ("line_%02i" % i for i in range(12))
         counts = [self.bench.load(itertools.islice(lines, 10)) for _ in range(3)]
-        self.assertEqual(counts, [10, 0, 0])
+        self.assertEqual(counts, [(10, 70), (2, 14), (0, 0)])
 
 
     def test_run(self):

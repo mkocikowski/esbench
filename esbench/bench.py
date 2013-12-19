@@ -246,11 +246,13 @@ class Benchmark(object):
     def load(self, lines):
 
         count = 0
+        size_b = 0
         for line in lines:
+            size_b += len(line)
             resp = esbench.api.document_post(self.conn, self.doc_index_name, self.doctype, line)
             count += 1
-        logger.info("loaded %i lines into index '%s'", count, self.doc_index_name)
-        return count
+        logger.info("loaded %i lines into index '%s', size: %i (%.2fMB)", count, self.doc_index_name, size_b, size_b/(1<<20))
+        return (count, size_b)
 
 
 #     def run(self, lines):
@@ -281,11 +283,17 @@ class Benchmark(object):
             esbench.api.index_delete(self.conn, self.doc_index_name)
             esbench.api.index_create(self.conn, self.doc_index_name, self.config['index'])
 
+        total_count = 0
+        total_size_b = 0
         for batch in batches:
-            if not self.load(batch):
+            count, size_b = self.load(batch)
+            if not count:
                 break
+            total_count += count
+            total_size_b += size_b
             self.observe()
 
+        logger.info("load complete; loaded total %i lines into index '%s', total size: %i (%.2fmb)", total_count, self.doc_index_name, total_size_b, total_size_b/(1<<20))
 
 
     def record(self):
