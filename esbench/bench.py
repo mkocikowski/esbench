@@ -254,7 +254,26 @@ class Benchmark(object):
         return count
 
 
-    def run(self, lines):
+#     def run(self, lines):
+#
+#         index_settings = {"settings" : {"index" : {"number_of_shards" : 1, "number_of_replicas" : 0}}}
+#         esbench.api.index_create(self.conn, self.stats_index_name, index_settings)
+#
+#         if not self.argv.append:
+#             esbench.api.index_delete(self.conn, self.doc_index_name)
+#             esbench.api.index_create(self.conn, self.doc_index_name, self.config['index'])
+#
+#         observation_period = self.argv.n // self.argv.observations
+#         if observation_period < 10:
+#             observation_period = 10
+#
+#         while True:
+#             batch = itertools.islice(lines, observation_period)
+#             if not self.load(batch):
+#                 break
+#             self.observe()
+
+    def run(self, batches):
 
         index_settings = {"settings" : {"index" : {"number_of_shards" : 1, "number_of_replicas" : 0}}}
         esbench.api.index_create(self.conn, self.stats_index_name, index_settings)
@@ -263,15 +282,11 @@ class Benchmark(object):
             esbench.api.index_delete(self.conn, self.doc_index_name)
             esbench.api.index_create(self.conn, self.doc_index_name, self.config['index'])
 
-        observation_period = self.argv.n // self.argv.observations
-        if observation_period < 10:
-            observation_period = 10
-
-        while True:
-            batch = itertools.islice(lines, observation_period)
+        for batch in batches:
             if not self.load(batch):
                 break
             self.observe()
+
 
 
     def record(self):

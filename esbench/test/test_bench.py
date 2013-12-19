@@ -164,12 +164,13 @@ class BenchmarkTest(unittest.TestCase):
     def test_run(self):
 
         self.obs_count = 0
+
         def _obs():
             self.obs_count += 1
 
-        lines = ("line_%02i" % i for i in range(100))
+        batches = esbench.data.batches_iterator(("line_%02i" % i for i in range(100)), batch_count=10, max_n=100, max_byte_size=0)
         self.bench.observe = _obs
-        self.bench.run(lines)
+        self.bench.run(batches)
         self.assertEqual(len(self.conn.conn.requests), 103)
         self.assertEqual(self.conn.conn.requests[:4], [('PUT', None, '{"settings": {"index": {"number_of_replicas": 0, "number_of_shards": 1}}}'), ('DELETE', u'esbench_test', None), ('PUT', u'esbench_test', '{"mappings": {"doc": {"_size": {"enabled": true, "store": "yes"}, "properties": {"abstract": {"properties": {"txt": {"type": "string", "store": "yes"}}}}, "_source": {"enabled": true}}}, "settings": {"index": {"number_of_replicas": 0, "number_of_shards": 1}}}'), ('POST', u'esbench_test/doc', 'line_00')])
         self.assertEqual(self.obs_count, 10)
@@ -179,9 +180,9 @@ class BenchmarkTest(unittest.TestCase):
         self.cmnd = "run --append"
         self.argv = esbench.client.args_parser().parse_args(self.cmnd.split())
         self.bench = esbench.bench.Benchmark(self.cmnd, self.argv, self.conn)
-        lines = ("line_%02i" % i for i in range(100))
+        batches = esbench.data.batches_iterator(("line_%02i" % i for i in range(100)), batch_count=10, max_n=100, max_byte_size=0)
         self.bench.observe = _obs
-        self.bench.run(lines)
+        self.bench.run(batches)
         self.assertEqual(len(self.conn.conn.requests), 101)
         self.assertEqual(self.conn.conn.requests[:4], [('PUT', None, '{"settings": {"index": {"number_of_replicas": 0, "number_of_shards": 1}}}'), ('POST', u'esbench_test/doc', 'line_00'), ('POST', u'esbench_test/doc', 'line_01'), ('POST', u'esbench_test/doc', 'line_02')])
         self.assertEqual(self.obs_count, 10)
@@ -191,24 +192,12 @@ class BenchmarkTest(unittest.TestCase):
         self.cmnd = "run --append --observations 5"
         self.argv = esbench.client.args_parser().parse_args(self.cmnd.split())
         self.bench = esbench.bench.Benchmark(self.cmnd, self.argv, self.conn)
-        lines = ("line_%02i" % i for i in range(100))
+        batches = esbench.data.batches_iterator(("line_%02i" % i for i in range(100)), batch_count=5, max_n=100, max_byte_size=0)
         self.bench.observe = _obs
-        self.bench.run(lines)
+        self.bench.run(batches)
         self.assertEqual(len(self.conn.conn.requests), 101)
         self.assertEqual(self.conn.conn.requests[:4], [('PUT', None, '{"settings": {"index": {"number_of_replicas": 0, "number_of_shards": 1}}}'), ('POST', u'esbench_test/doc', 'line_00'), ('POST', u'esbench_test/doc', 'line_01'), ('POST', u'esbench_test/doc', 'line_02')])
         self.assertEqual(self.obs_count, 5)
-
-        self.obs_count = 0
-        self.conn = esbench.api.Conn(conn_cls=esbench.test.test_api.MockHTTPConnection)
-        self.cmnd = "run --append --observations 5 20"
-        self.argv = esbench.client.args_parser().parse_args(self.cmnd.split())
-        self.bench = esbench.bench.Benchmark(self.cmnd, self.argv, self.conn)
-        lines = ("line_%02i" % i for i in range(20))
-        self.bench.observe = _obs
-        self.bench.run(lines)
-        self.assertEqual(len(self.conn.conn.requests), 21)
-        self.assertEqual(self.conn.conn.requests[:4], [('PUT', None, '{"settings": {"index": {"number_of_replicas": 0, "number_of_shards": 1}}}'), ('POST', u'esbench_test/doc', 'line_00'), ('POST', u'esbench_test/doc', 'line_01'), ('POST', u'esbench_test/doc', 'line_02')])
-        self.assertEqual(self.obs_count, 2)
 
 
     def test_observe(self):
@@ -224,7 +213,7 @@ class BenchmarkTest(unittest.TestCase):
         self.bench.prepare()
         resp = self.bench.record()
         data = json.loads(resp.data)
-        self.assertEqual(data['argv']['n'], 100)
+        self.assertEqual(data['argv']['maxsize'], '1mb')
         # TODO: more tests?
 
 

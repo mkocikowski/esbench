@@ -10,6 +10,8 @@ import urllib2
 import gzip
 import itertools
 import string
+import contextlib
+import collections
 
 import esbench
 
@@ -18,10 +20,10 @@ logger = logging.getLogger(__name__)
 # URL = "https://s3-us-west-1.amazonaws.com/esbench/assn_%s.gz"
 URL = "https://s3-us-west-1.amazonaws.com/esbench/appl_%s.gz"
 
-def _aa(count=None): 
+def _aa(count=None):
     i = ("".join(i) for i in itertools.product(string.lowercase, repeat=2))
     if count:
-        i = itertools.islice(i, count) 
+        i = itertools.islice(i, count)
     return i
 
 
@@ -30,26 +32,20 @@ def urls(count=None):
         yield (URL % s)
 
 
-def download(url, tmpd="/tmp"): 
+def download(url, tmpd="/tmp"):
 
-#     
-#     # make the ./tmp directory if needed
-#     tmpd = os.path.abspath("./tmp")
-#     if not os.path.isdir(tmpd): 
-#         os.mkdir(tmpd, 0700)
-        
     fn = os.path.basename(url)
     fn = os.path.abspath(os.path.join(tmpd, fn))
-        
+
     logger.info("Downloading '%s' to '%s'", url, fn)
-    
+
     # if the file already exists, don't download it again
-    if os.path.exists(fn): 
+    if os.path.exists(fn):
         logger.info("Using cached file '%s'", fn)
         return fn
-    
+
     resp = urllib2.urlopen(url)
-    
+
     with open(fn, 'w') as f:
         chunk = resp.read(2**16)
         while chunk:
@@ -63,27 +59,71 @@ def download(url, tmpd="/tmp"):
     return fn
 
 
-def unzip(fn): 
+def unzip(fn):
 
-    with gzip.open(fn, 'rb') as f: 
+    with gzip.open(fn, 'rb') as f:
         for line in f:
             yield(line.strip())
-            
 
-def feed(nocache=False): 
+
+def get_data(nocache=False):
 
     for url in urls():
         fn = download(url)
-        try: 
-            for line in unzip(fn): 
-                yield line 
-        except IOError: 
+        try:
+            for line in unzip(fn):
+                yield line
+        except IOError:
             logger.error("IOError reading file: '%s'. Looks like the cached data file is corrupted, it will now be removed, and downloaded again on the next test run. Moving on to the next data file - this error will not affect the test run.", fn)
             nocache = True # this will remove the file in finally clause
         finally:
             if nocache:
                 os.remove(fn)
                 logger.info("removed file '%s'", fn)
+
+
+@contextlib.contextmanager
+def feed(path=None, lines_i=None, data_f=get_data):
+
+    if lines_i:
+        if not isinstance(lines_i, collections.Iterable):
+            raise TypeError("'lines_i' must be iterable")
+        yield lines_i
+    elif path:
+        with open(path, 'rU') as lines_i:
+            yield lines_i
+    else:
+        yield data_f()
+
+    # no cleanup needed
+    logger.debug("exit feed context manager")
+    pass
+
+
+
+def batch_iterator(lines=None, max_batch_n=0, max_batch_byte_size=0):
+
+    curr_n = 0
+    curr_byte_size = 0
+
+    while ((max_batch_n and (curr_n < max_batch_n)) or
+           (max_batch_byte_size and (curr_byte_size < max_batch_byte_size)) ):
+
+        line = next(lines)
+        curr_n += 1
+        curr_byte_size += len(line)
+
+        yield line
+
+
+def batches_iterator(lines=None, batch_count=0, max_n=0, max_byte_size=0):
+
+    if not (max_n or max_byte_size):
+        raise ValueError("must specify either max_n or max_byte_size")
+
+    for _ in range(batch_count):
+        yield batch_iterator(lines=lines, max_batch_n=max_n//batch_count, max_batch_byte_size=max_byte_size//batch_count)
+
 
 
 def args_parser():
@@ -98,16 +138,16 @@ def main():
     logging.basicConfig(level=logging.WARNING)
     args = args_parser().parse_args()
 
-    try: 
+    try:
         for line in feed(nocache=args.nocache):
-            print(line) 
-        
+            print(line)
+
         sys.exit(0)
-    
+
     except IOError as exc:
         logger.warning(exc)
         pass
-    
+
 
 if __name__ == "__main__":
     main()

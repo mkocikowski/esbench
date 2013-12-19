@@ -27,13 +27,12 @@ def get_lines_iterator(path=None, count=None):
         # if count is None, iterate through all elements
         lines = itertools.islice(infile, count)
     else:
-        lines = itertools.islice(esbench.data.feed(), count)
+        lines = itertools.islice(esbench.data.get_data(), count)
 
     yield lines
 
     if infile:
         infile.close()
-
 
 
 def args_parser():
@@ -56,7 +55,9 @@ def args_parser():
     parser_run.add_argument('--name', type=str, action='store', default="%s::%s" % (socket.gethostname(), esbench.bench.timestamp()), help="human readable name of the benchmark; (%(default)s)")
     parser_run.add_argument('--append', action='store_true', help="if set, append data to the index; (%(default)s)")
     parser_run.add_argument('--data', metavar='PATH', type=str, action='store', default=None, help="read data from PATH; set to /dev/stdin to read from stdin. Set this only if you want to provide your own data, by default US Patent Application data will be used; (%(default)s)")
-    parser_run.add_argument('n', nargs="?", type=int, default=100, help='number of documents; (%(default)i)')
+#     parser_run.add_argument('n', nargs="?", type=int, default=100, help='number of documents; (%(default)i)')
+    parser_run.add_argument('maxsize', nargs="?", type=str, default='1mb', help="max size of the index, as either the number of documents (int) or byte size (int + 'kb'/'mb'/'gb'); (%(default)s)")
+
 
 #     parser_observe = subparsers.add_parser('observe', help='run an observation (no data loading)')
 #     parser_observe.set_defaults(no_optimize_calls=True, segments=None)
@@ -86,6 +87,20 @@ def args_parser():
     return parser
 
 
+def parse_maxsize(value):
+
+    max_n = 0
+    max_byte_size = 1 << 20
+    try:
+        max_n = int(value.strip())
+        max_byte_size = 0
+    except ValueError:
+        max_n = 0
+        orders = {'kb': 10, 'mb': 20, 'gb': 30, 'tb': 40}
+        max_byte_size = int(value[:-2]) << orders[value[-2:].lower()]
+    return max_n, max_byte_size
+
+
 def main():
 
     args = args_parser().parse_args()
@@ -103,8 +118,15 @@ def main():
                 for _ in range(args.observations):
                     benchmark.observe()
             else:
-                with get_lines_iterator(path=args.data, count=args.n) as lines:
-                    benchmark.run(lines)
+#                 with get_lines_iterator(path=args.data, count=args.n) as lines:
+#                     benchmark.run(lines)
+                max_n, max_byte_size = parse_maxsize(args.maxsize)
+                with esbench.data.feed(path=args.data) as feed:
+                    batches = esbench.data.batches_iterator(lines=feed, batch_count=args.observations, max_n=max_n, max_byte_size=max_byte_size)
+                    benchmark.run(batches)
+
+
+
             benchmark.record()
 
 #         elif args.command == 'observe':
