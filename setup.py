@@ -40,7 +40,7 @@ setup(
     author = 'Mik Kocikowski',
     author_email = 'mkocikowski@gmail.com',
     url = 'https://github.com/mkocikowski/esbench',
-    description = 'Elasticsearch benchmarking tool',
+    description = 'Elasticsearch benchmark tool',
     long_description = ld,
     install_requires = ['tabulate >= 0.6', ],
     packages = ['esbench', 'esbench.test'],
