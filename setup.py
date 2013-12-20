@@ -12,6 +12,26 @@
 from setuptools import setup
 
 ld = """Tool for benchmarking Elasticsearch nodes.
+
+The two primary uses are for capacity planning (guessing how much oomph you
+need to do what what you think you need to do), and for performance tuning
+(trying out various index, mapping, and query settings in a consistent and
+reproducible manner).
+
+An Elasticsearch index is composed of a set of 1 or more Lucene indexes
+(designated as primary and replica 'shards' by ES). A single Lucene index is
+the basic unit on which indexing and search operations are executed, and so
+the performance of individual Lucene indexes largely determines the
+performance of a cluster.
+
+The basic approach is to create an index with 1 primary and no replica shards
+(a single Lucene index), load it with data, and periodically run
+representative use patterns against it, recording observations, adding more
+data until the performance drops below acceptable levels.
+
+This tool comes with 'batteries included'. See the README.md file, or even
+better, the project's github page.
+
 """
 
 setup(
