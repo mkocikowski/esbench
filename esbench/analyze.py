@@ -2,6 +2,8 @@
 # (c)2013 Mik Kocikowski, MIT License (http://opensource.org/licenses/MIT)
 # https://github.com/mkocikowski/esbench
 
+"""Code for retrieving, analyzing, and displaying recorded benchmark data. """
+
 import itertools
 import logging
 import json
@@ -106,10 +108,20 @@ def get_stat_tuples(conn, benchmark_ids=None, sort_f=lambda stat: (stat.bench_id
     return data
 
 
+
+
 def show_benchmarks(conn, benchmark_ids=None, sample=1, format='tab', indent=4):
     data = get_stat_tuples(conn, benchmark_ids)
     if data:
+        legend = """
+------------------------------------------------------------------------------
+All times recorded aggregate, look at the related n_ value. So if 'n_query' == 100, and 't_query_ms' == 1000, it means
+that it took 1000ms to run the query 100 times, so 10ms per query.
+------------------------------------------------------------------------------
+""".strip()
+        print(legend)
         print(tabulate.tabulate(data, headers=data[0]._fields))
+        print(legend)
 
 
 def dump_benchmarks(conn=None, ids=None, stats_index_name=esbench.STATS_INDEX_NAME):
