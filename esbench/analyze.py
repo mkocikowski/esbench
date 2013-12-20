@@ -106,7 +106,6 @@ def get_stat_tuples(conn, benchmark_ids=None, sort_f=lambda stat: (stat.bench_id
     return data
 
 
-
 def show_benchmarks(conn, benchmark_ids=None, sample=1, format='tab', indent=4):
     data = get_stat_tuples(conn, benchmark_ids)
     if data:
@@ -119,10 +118,10 @@ def dump_benchmarks(conn=None, ids=None, stats_index_name=esbench.STATS_INDEX_NA
     You can save these calls to a file, and then replay them somewhere else.
     """
 
-    for benchmark in benchmarks(conn, ids):
+    for benchmark in benchmarks(_get_benchmarks(conn=conn, stats_index_name=stats_index_name), ids):
         curl = """curl -XPUT 'http://localhost:9200/%s/bench/%s' -d '%s'""" % (stats_index_name, benchmark['_id'], json.dumps(benchmark['_source']))
         print(curl)
-        for o in observations(conn, benchmark['_id']):
+        for o in observations(_get_observations(conn, benchmark['_id'], stats_index_name=stats_index_name)):
             curl = """curl -XPUT 'http://localhost:9200/%s/obs/%s' -d '%s'""" % (stats_index_name, o['_id'], json.dumps(o['_source']))
             print(curl)
     return
