@@ -15,13 +15,24 @@ reproducible manner).
 Installation
 ------------
 
-    pip install https://github.com/mkocikowski/esbench/archive/master.zip
+For now, since the project is under active development, I recommend that you
+install from the 'dev' branch, with: 
+
+    pip install https://github.com/mkocikowski/esbench/archive/dev.zip
+
+This should give you a reasonable stable and reasonably current version. There
+is always the 'master' (replace 'dev.zip' with 'master.zip' in the command
+above), but I really think for now you are best off with 'dev'. 
+
 
 Tests
 -----
 Once 'esbench' has been installed (no need for local Elasticsearch instance):
 
 	python -m esbench.test.units
+
+This may take few minutes as part of the test involves downloading a sample
+data file from s3. 
 
 Quick start
 -----------
@@ -50,24 +61,24 @@ store data on disk in append-only 'segments', which can be periodically
 cleaned up and merged. The number and size (bytes) of these segments, and the
 disk IO, ultimately determine the speed at which data can be retrieved. 
 
-The basic approach to capacity planning then is to create an Elasticsearch
-index with 1 primary and no replica shards (a single Lucene index), load it
-with data, and run representative use patterns against it, adding more data
-until the performance drops below acceptable levels. That will determine the
-maximum viable size of a single shard given the data, use patterns, and
-hardware. Total expected data size divided by the viable single index size
-gives then the number of required shards. With a rule of thumb of no more than
-2 shards per core, this allows for simple capacity planning. 
+The basic approach to benchmarking is to create an Elasticsearch index with 1
+primary and no replica shards (a single Lucene index), load it with data, and
+run representative use patterns against it, adding more data until the
+performance drops below acceptable levels. That will determine the maximum
+viable size of a single shard given the data, use patterns, and hardware.
+Total expected data size divided by the viable single index size gives then
+the number of required shards. With a rule of thumb of no more than 2 shards
+per core, this allows for simple capacity planning. 
 
 The 'run' command
 -----------------
-When the 'run' command is executed, a 'test' index is created on the target ES
-host, populated with provided data, and queried at specified intervals. The
-queries which will be executed against the index are provided in the
-'config.json' file. Observations taken while the benchmark is running are
-recorded in the 'stats' index on the ES host. Each benchmark results in one
-document of type 'bench' and one or more documents of type 'obs' (observation)
-added to the 'stats' index. 
+When the 'run' command is executed, a 'esbench_test' index is created on the
+target ES host, populated with provided data, and queried at specified
+intervals. The queries which will be executed against the index are provided
+in the 'config.json' file. Observations taken while the benchmark is running
+are recorded in the 'esbench_stats' index on the ES host. Each benchmark
+results in one document of type 'bench' and one or more documents of type
+'obs' (observation) added to the 'esbench_stats' index. 
 
 When executed with default arguments, the 'run' command will result in a quick
 (too small to be meaningful) benchmark run against the local ES instance,
@@ -75,34 +86,39 @@ using US Patent Application data downloaded from S3 (into /tmp, size 99MB).
 The intention is to provide sample data to verify that the 'rig is working'
 and to familiarize the user with observation data.
 
-The first argument to play with is 'n', the only non-keyword parameter, which
-specifies the total number of documents to be inserted into the test index.
-Default value of 100, which results in an index of just 2.9MB, but allows the
-benchmark to run in just few seconds. Running: 
+The first argument to play with is 'maxsize', the only non-keyword parameter,
+which specifies the total number of documents to be inserted into the test
+index, or the total byte size of data to be inserted. Default value is 1mb
+allows the benchmark to run in just few seconds. Running: 
 
-	esbench run 100000 
+	esbench run 5gb
 
-will result in an index of 4.7GB, which starts to yield meaningful performance
-information. Experimenting with queries, and the various parameters (try
-adjusting the number of segments or optimize calls) will yield interesting
-changes. Depending on the specified logging level, you will see information
-somewhat like that when running the benchmark: 
+will result in an index of about 4.8GB, which starts to yield meaningful
+performance information. Experimenting with queries, and the various
+parameters (try adjusting the number of segments or optimize calls) will yield
+interesting changes. Depending on the specified logging level, you will see
+information somewhat like that when running the benchmark: 
 
 	[...]
-	INFO:esbench.bench:beginning observation no: 9, 2013-10-17T22:50:59Z
-	INFO:esbench.bench:ran query 'match_abs' 100 times in 1.27s
-	INFO:esbench.bench:ran query 'match' 100 times in 1.32s
-	INFO:esbench.bench:ran query 'mlt' 100 times in 0.28s
-	INFO:esbench.bench:ran query 'match_srt' 100 times in 1.39s
-	INFO:esbench.bench:finished observation no: 9, id: 3f519b57, time: 4.260
-	INFO:esbench.bench:recorded observation into: stats/obs/3f519b57
-	[...]
+    INFO:esbench.bench:loaded 169 lines into index 'esbench_test', size: 10501511 (10.00MB)
+    INFO:esbench.bench:optimize call: 4.04s
+    INFO:esbench.bench:beginning observation no: 10, 2013-12-20T01:10:09Z
+    INFO:esbench.bench:ran query 'match_no_rnd' 100 times in 0.48s
+    INFO:esbench.bench:ran query 'match_abs' 100 times in 0.29s
+    INFO:esbench.bench:ran query 'match' 100 times in 0.48s
+    INFO:esbench.bench:ran query 'mlt' 100 times in 0.12s
+    INFO:esbench.bench:ran query 'match_srt' 100 times in 0.66s
+    INFO:esbench.bench:finished observation no: 10, id: 32baae87, time: 2.033
+    INFO:esbench.bench:recorded observation into: esbench_stats/obs/32baae87
+    INFO:esbench.bench:load complete; loaded total 2626 lines into index 'esbench_test', total size: 105182234 (100.00mb)
+    INFO:esbench.bench:recorded benchmark into: esbench_stats/bench/4c5b7f33
+    [...]
 
-As data is stored into the 'stats' index, you can access it raw (see the last
+As data is stored into the 'esbench_stats' index, you can access it raw (see the last
 log line for the URL). Once you've done that, you'll see why you want to use
 the 'show' command, described in the next section: 
 
-	curl -XGET localhost:9200/stats/obs/3f519b57
+	curl -XGET localhost:9200/esbench_stats/bench/4c5b7f33
 
 
 The 'show' command
@@ -115,7 +131,16 @@ localhost.
 The 'dump' command
 ------------------
 Dump previously recorded benchmark data as a series of curl calls. These can
-be replayed to populate a new index. 
+be replayed to populate a new index. The idea with this is that this way you
+can easily share the raw benchmark data, say by dumping it into gist. Or you
+can just copy and paste right in the terminal - it is just a series of curl
+calls. To dump into a file:
+
+    esbench dump > foo.curl
+
+To load these into an elasticsearch index on localhost:
+
+    . foo.curl
 
 The 'clear' command
 -------------------

@@ -8,42 +8,42 @@
 
 # import ez_setup
 # ez_setup.use_setuptools()
-# 
+#
 from setuptools import setup
 
-ld = """Tool for benchmarking Elasticsearch nodes. 
+ld = """Tool for benchmarking Elasticsearch nodes.
 """
 
 setup(
-    name = 'esbench', 
-    version = '0.0.6', 
-    author = 'Mik Kocikowski', 
-    author_email = 'mkocikowski@gmail.com', 
-    url = 'https://github.com/mkocikowski/esbench', 
-    description = 'Elasticsearch benchmarking tool', 
+    name = 'esbench',
+    version = '0.0.7',
+    author = 'Mik Kocikowski',
+    author_email = 'mkocikowski@gmail.com',
+    url = 'https://github.com/mkocikowski/esbench',
+    description = 'Elasticsearch benchmarking tool',
     long_description = ld,
-    install_requires = ['tabulate >= 0.6', ], 
-    packages = ['esbench', 'esbench.test'], 
+    install_requires = ['tabulate >= 0.6', ],
+    packages = ['esbench', 'esbench.test'],
     package_data = {
-        '': ['README.md'], 
-        'esbench': ['config.json'], 
+        '': ['README.md'],
+        'esbench': ['config.json'],
     },
     entry_points = {
         'console_scripts': [
-            'esbench = esbench.client:main', 
+            'esbench = esbench.client:main',
         ]
-    }, 
+    },
     classifiers = [
-        "Development Status :: 3 - Alpha", 
-        "Environment :: Console", 
-        "Intended Audience :: Developers", 
-        "License :: OSI Approved :: MIT License", 
-        "Natural Language :: English", 
+        "Development Status :: 3 - Alpha",
+        "Environment :: Console",
+        "Intended Audience :: Developers",
+        "License :: OSI Approved :: MIT License",
+        "Natural Language :: English",
         "Operating System :: POSIX",
-        "Topic :: System :: Benchmark", 
-        "Topic :: Internet :: WWW/HTTP :: Indexing/Search",  
+        "Topic :: System :: Benchmark",
+        "Topic :: Internet :: WWW/HTTP :: Indexing/Search",
         "Topic :: Utilities",
-    ], 
+    ],
     license = 'MIT',
-    test_suite = "esbench.test.units.suite", 
+    test_suite = "esbench.test.units.suite",
 )
