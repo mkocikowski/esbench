@@ -58,7 +58,10 @@ and search operations are executed, and so the performance of individual
 Lucene indexes largely determines the performance of a cluster. Lucene indexes
 store data on disk in append-only 'segments', which can be periodically
 cleaned up and merged. The number and size (bytes) of these segments, and the
-disk IO, ultimately determine the speed at which data can be retrieved. 
+disk IO, ultimately determine the speed at which data can be retrieved. Read
+the
+[merge](http://www.elasticsearch.org/guide/en/elasticsearch/reference/current/
+index-modules-merge.html) documentation on the ES site. 
 
 The basic approach to benchmarking is to create an Elasticsearch index with 1
 primary and no replica shards (a single Lucene index), load it with data, and
