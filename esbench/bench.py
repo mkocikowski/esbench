@@ -17,8 +17,6 @@ import esbench.data
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_TIMEOUT = 10
-
 
 def uuid():
     return hashlib.md5("%s%f" % (str(time.time()), random.random())).hexdigest()[:8]
@@ -144,7 +142,10 @@ class Observation(object):
         stats_group_names = [q.stats_group_name for q in self.queries]
         resp = stats_f(self.conn, self.doc_index_name, ",".join(stats_group_names))
         logger.debug("stats call: %s", resp.curl)
-        stats = json.loads(resp.data)['indices'][self.doc_index_name]['primaries']
+        try:
+            stats = json.loads(resp.data)['indices'][self.doc_index_name]['primaries']
+        except KeyError: # compatibility with 19.9
+            stats = json.loads(resp.data)['_all']['indices'][self.doc_index_name]['primaries']
 
         def _remove_obs_id(s):
             return "_".join(s.split("_")[1:])
@@ -162,6 +163,18 @@ class Observation(object):
         return stats
 
 
+    def _cluster_stats(self, cluster_f=esbench.api.cluster_get_stats):
+
+        try:
+            resp = esbench.api.cluster_get_stats(self.conn)
+            cluster_stats = json.loads(resp.data)
+        except (TypeError, IOError) as exc:
+            logger.warning("couldn't get cluster stats: %s", exc)
+            cluster_stats = None
+
+        return cluster_stats
+
+
     def record(self):
 
         obs = {
@@ -174,6 +187,7 @@ class Observation(object):
             },
             'segments': self._segments(),
             'stats': self._stats(),
+            'cluster': self._cluster_stats(),
         }
 
         data = json.dumps(obs, sort_keys=True)
@@ -181,7 +195,7 @@ class Observation(object):
         resp = self.conn.put(path, data)
         if resp.status not in [200, 201]:
             logger.error(resp)
-        logger.info("recorded observation into: %s", path)
+        logger.info("recorded observation into: http://%s:%i/%s", self.conn.host, self.conn.port, path)
         return resp
 
 
@@ -255,25 +269,6 @@ class Benchmark(object):
         return (count, size_b)
 
 
-#     def run(self, lines):
-#
-#         index_settings = {"settings" : {"index" : {"number_of_shards" : 1, "number_of_replicas" : 0}}}
-#         esbench.api.index_create(self.conn, self.stats_index_name, index_settings)
-#
-#         if not self.argv.append:
-#             esbench.api.index_delete(self.conn, self.doc_index_name)
-#             esbench.api.index_create(self.conn, self.doc_index_name, self.config['index'])
-#
-#         observation_period = self.argv.n // self.argv.observations
-#         if observation_period < 10:
-#             observation_period = 10
-#
-#         while True:
-#             batch = itertools.islice(lines, observation_period)
-#             if not self.load(batch):
-#                 break
-#             self.observe()
-
     def run(self, batches):
 
         index_settings = {"settings" : {"index" : {"number_of_shards" : 1, "number_of_replicas" : 0}}}
@@ -296,6 +291,18 @@ class Benchmark(object):
         logger.info("load complete; loaded total %i lines into index '%s', total size: %i (%.2fmb)", total_count, self.doc_index_name, total_size_b, total_size_b/(1<<20))
 
 
+    def _get_cluster_info(self, cluster_f=esbench.api.cluster_get_info):
+
+        try:
+            resp = cluster_f(self.conn)
+            cluster_info = json.loads(resp.data)
+        except (TypeError, IOError) as exc:
+            logger.warning("couldn't get cluster info: %s", exc)
+            cluster_info = None
+
+        return cluster_info
+
+
     def record(self):
 
         self.ts_stop = timestamp()
@@ -310,12 +317,14 @@ class Benchmark(object):
             't_total_in_millis': int(self.t_total * 1000),
             'argv': self.argv.__dict__,
             'cmnd': self.cmnd,
-            'config': json.dumps(self.config, sort_keys=True),
+#             'config': json.dumps(self.config, sort_keys=True),
+            'config': self.config,
+            'cluster': self._get_cluster_info(),
         }
 
         data = json.dumps(stat, sort_keys=True)
         path = '%s/bench/%s' % (self.stats_index_name, self,)
         resp = self.conn.put(path, data)
-        logger.info("recorded benchmark into: %s", path)
+        logger.info("recorded benchmark into: http://%s:%i/%s", self.conn.host, self.conn.port, path)
         return resp
 

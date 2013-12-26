@@ -36,7 +36,7 @@ better, the project's github page.
 
 setup(
     name = 'esbench',
-    version = '0.0.7',
+    version = '0.0.8',
     author = 'Mik Kocikowski',
     author_email = 'mkocikowski@gmail.com',
     url = 'https://github.com/mkocikowski/esbench',

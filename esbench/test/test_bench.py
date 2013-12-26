@@ -211,9 +211,11 @@ class BenchmarkTest(unittest.TestCase):
         # must call .prepare() first
         self.assertRaises(TypeError, self.bench.record)
         self.bench.prepare()
+        self.bench._get_cluster_info = lambda: {'foo': 'bar'}
         resp = self.bench.record()
         data = json.loads(resp.data)
         self.assertEqual(data['argv']['maxsize'], '1mb')
+        self.assertEqual(data['cluster']['foo'], 'bar')
         # TODO: more tests?
 
 

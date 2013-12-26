@@ -13,25 +13,25 @@ import esbench.api
 
 class MockHTTPResponse(object):
 
-    def __init__(self, req=None): 
+    def __init__(self, req=None):
         self.method, self.url, self.body = req if req else (None, None, None)
         self.status = 200
         self.reason = 'no reason'
-        try: 
+        try:
             d = json.loads(self.body)
             self.status = d.get('status', 200)
             self.reason = d.get('reason', 'no reason')
         except (TypeError, ValueError):
             pass
-    
-    def read(self): 
+
+    def read(self):
         return self.body
-    
+
 
 class MockHTTPConnection(object):
     """Mock httplib.HTTPConnection"""
 
-    def __init__(self, host='localhost', port=9200, timeout=10): 
+    def __init__(self, host='localhost', port=9200, timeout=10):
         self.host = host
         self.port = port
         self.timeout = timeout
@@ -39,23 +39,23 @@ class MockHTTPConnection(object):
         self.req = None
         self.requests = []
         self.responses = []
-    
+
     def connect(self):
         self.sock = True
-    
+
     def close(self):
         self.sock = None
-    
-    def request(self, method, url, body=None, headers=None): 
+
+    def request(self, method, url, body=None, headers=None):
         self.req = (method, url, body)
         self.requests.append(self.req)
         return
-    
+
     def getresponse(self):
         resp = MockHTTPResponse(self.req)
         self.responses.append(resp)
         return resp
-    
+
 
 class ApiConnTest(unittest.TestCase):
 
@@ -64,15 +64,15 @@ class ApiConnTest(unittest.TestCase):
         c = esbench.api.Conn(conn_cls=MockHTTPConnection)
         self.assertEqual(c.__dict__, {'conn': None, 'host': 'localhost', 'port': 9200, 'timeout': 10, 'conn_cls': MockHTTPConnection})
         c.connect()
-        self.assertIs(c.conn.sock, True)                    
+        self.assertIs(c.conn.sock, True)
         c.close()
         self.assertIsNone(c.conn)
 
     def test_connect(self):
-        with esbench.api.connect(conn_cls=MockHTTPConnection) as c: 
+        with esbench.api.connect(conn_cls=MockHTTPConnection) as c:
             resp = c.get("foo/bar")
             self.assertEqual(resp.status, 200)
-            self.assertIs(c.conn.sock, True)                    
+            self.assertIs(c.conn.sock, True)
         self.assertIsNone(c.conn)
 
     def test_req_resp(self):
@@ -114,9 +114,9 @@ class ApiConnTest(unittest.TestCase):
     def test_conn_delete(self):
         c = esbench.api.Conn(conn_cls=MockHTTPConnection)
         resp = c.delete("foo/bar")
-        self.assertEqual(resp.curl, "curl -XDELETE http://localhost:9200/foo/bar")        
+        self.assertEqual(resp.curl, "curl -XDELETE http://localhost:9200/foo/bar")
 
-    
+
 
 class ApiFuncTest(unittest.TestCase):
 
@@ -129,16 +129,16 @@ class ApiFuncTest(unittest.TestCase):
 
     def test_index_create(self):
         resp = esbench.api.index_create(self.c, 'i1', config={'mapping': 'foo'})
-        self.assertEqual(resp.curl, """curl -XPUT http://localhost:9200/i1 -d \'{"mapping": "foo"}\'""") 
+        self.assertEqual(resp.curl, """curl -XPUT http://localhost:9200/i1 -d \'{"mapping": "foo"}\'""")
 
     def test_index_delete(self):
         resp = esbench.api.index_delete(self.c, 'i1')
-        self.assertEqual(resp.curl, """curl -XDELETE http://localhost:9200/i1""") 
+        self.assertEqual(resp.curl, """curl -XDELETE http://localhost:9200/i1""")
 
     def test_index_get_stats(self):
         resp = esbench.api.index_get_stats(self.c, 'i1', '123_mlt,123_match')
-        self.assertEqual(resp.curl, """curl -XGET http://localhost:9200/i1/_stats?clear=true&docs=true&store=true&search=true&merge=true&indexing=true&groups=123_mlt,123_match""")
-    
+        self.assertEqual(resp.curl, """curl -XGET http://localhost:9200/i1/_stats?clear=true&docs=true&store=true&search=true&merge=true&indexing=true&fielddata=true&groups=123_mlt,123_match""")
+
     def test_index_set_refresh_interval(self):
         resp = esbench.api.index_set_refresh_interval(self.c, 'i1', '5s')
         self.assertEqual(resp.curl, """curl -XPUT http://localhost:9200/i1/_settings -d \'{"index": {"refresh_interval": "5s"}}\'""")
@@ -153,8 +153,16 @@ class ApiFuncTest(unittest.TestCase):
         resp = esbench.api.index_get_segments(self.c, 'i1')
         self.assertEqual(resp.curl, "curl -XGET http://localhost:9200/i1/_segments")
 
-        
+    def test_cluster_get_info(self):
+        resp = esbench.api.cluster_get_info(self.c)
+        self.assertEqual(resp.curl, "curl -XGET http://localhost:9200/_cluster/nodes?settings=true&os=true&process=true&jvm=true&thread_pool=true&network=true&transport=true&http=true&plugin=true")
+
+    def test_cluster_get_stats(self):
+        resp = esbench.api.cluster_get_stats(self.c)
+        self.assertEqual(resp.curl, "curl -XGET http://localhost:9200/_cluster/nodes/stats?indices=true&os=true&process=true&jvm=true&network=true&transport=true&http=true&fs=true&thread_pool=true")
+
+
 if __name__ == "__main__":
     logging.basicConfig(level=logging.DEBUG)
-    unittest.main()     
+    unittest.main()
 
