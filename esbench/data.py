@@ -21,7 +21,7 @@ import esbench
 logger = logging.getLogger(__name__)
 
 # URL = "https://s3-us-west-1.amazonaws.com/esbench/assn_%s.gz"
-URL = "https://s3-us-west-1.amazonaws.com/esbench/appl_%s.gz"
+URL_TEMPLATE = "https://s3-us-west-1.amazonaws.com/esbench/appl_%i_%s.gz"
 
 def _aa(count=None):
     i = ("".join(i) for i in itertools.product(string.lowercase, repeat=2))
@@ -30,9 +30,11 @@ def _aa(count=None):
     return i
 
 
-def urls(count=None):
-    for s in _aa(count):
-        yield (URL % s)
+def urls(url_template=None, count=75):
+    # default count=75 because that is the max number of yearly appl files
+    for year in range(2005, 2013):
+        for postfix in _aa(count):
+            yield (url_template % (year, postfix))
 
 
 def download(url, tmpd="/tmp"):
@@ -47,19 +49,23 @@ def download(url, tmpd="/tmp"):
         logger.info("Using cached file '%s'", fn)
         return fn
 
-    resp = urllib2.urlopen(url)
-
-    with open(fn, 'w') as f:
-        chunk = resp.read(2**16)
-        while chunk:
-            f.write(chunk)
+    try:
+        resp = urllib2.urlopen(url)
+        with open(fn, 'w') as f:
             chunk = resp.read(2**16)
-            sys.stderr.write(".")
+            while chunk:
+                f.write(chunk)
+                chunk = resp.read(2**16)
+                sys.stderr.write(".")
+        logger.info("finished downloading '%s'", fn)
+        resp.close()
 
-    logger.info("finished downloading '%s'", fn)
+    except (IOError,) as exc:
+        logger.debug("error %s opening url: %s", exc, url)
+        fn = None
 
-    resp.close()
     return fn
+
 
 
 def unzip(fn):
@@ -69,18 +75,22 @@ def unzip(fn):
             yield(line.strip())
 
 
-def get_data(nocache=False):
+def get_data(nocache=False, urls_f=urls):
     """Get default data provided with the benchmark (US Patent Applications).
 
     Returns an iterator, where each item is a json line with a complete US
     Patent Application document which can be indexed into Elasticsearch. In
     the background it deals with chunked downloads from S3, providing what in
-    essence is an 'unlimited' data source. See 'feed()' function below. 
+    essence is an 'unlimited' data source. See 'feed()' function below.
 
     """
 
-    for url in urls():
+    for url in urls_f(URL_TEMPLATE):
         fn = download(url)
+        if not fn:
+            # download() will return None if data can't be downloaded, in that
+            # case just go to the next url
+            continue
         try:
             for line in unzip(fn):
                 yield line
@@ -95,25 +105,25 @@ def get_data(nocache=False):
 
 @contextlib.contextmanager
 def feed(path=None, lines_i=None, data_f=get_data):
-    """Return an iterator with data to be fed into the index. 
+    """Return an iterator with data to be fed into the index.
 
     Given a source of data, return a safe iterator over that data. Data can
     come from one of 3 sources, provided in the parameters. The idea is that
     you use this function to provide the 'lines' iterator for the
     esbench.data.batches_iterator function below. This function is wrapped in
-    a context manager, so you would use it like so: 
+    a context manager, so you would use it like so:
 
-        with feed() as f: 
+        with feed() as f:
             for line in f:
                 print(line)
 
         Args:
             path: path to a file (can be '/dev/stdin'). When provided, lines
                 will be read from the file. The context manager ensures that
-                the file is closed properly when done. 
+                the file is closed properly when done.
             lines_i: iterator, yielding lines
             data_f: generator function, when called yields lines
-    
+
     """
 
     if lines_i:
@@ -133,10 +143,10 @@ def feed(path=None, lines_i=None, data_f=get_data):
 
 
 def batch_iterator(lines=None, max_batch_n=0, max_batch_byte_size=0):
-    """Yields up to n lines, or up to x byte size of data. 
-    
+    """Yields up to n lines, or up to x byte size of data.
+
     Given an iterator, yields an iterator which will pass through the data up
-    to n lines, or until specified byte size of data has been passed. 
+    to n lines, or until specified byte size of data has been passed.
 
     Args:
         lines: iterator
@@ -149,7 +159,7 @@ def batch_iterator(lines=None, max_batch_n=0, max_batch_byte_size=0):
 
     Yields:
         items from the provided iterator
-    
+
     """
 
     curr_n = 0
@@ -165,8 +175,8 @@ def batch_iterator(lines=None, max_batch_n=0, max_batch_byte_size=0):
         yield line
 
 
-def batches_iterator(lines=None, batch_count=0, max_n=0, max_byte_size=0): 
-    """Yields n batches of lines. 
+def batches_iterator(lines=None, batch_count=0, max_n=0, max_byte_size=0):
+    """Yields n batches of lines.
 
     Each batch is an iterator containing either n lines, or lines of certain
     combined byte size. You must provide batch_count, and either max_n or
@@ -180,10 +190,10 @@ def batches_iterator(lines=None, batch_count=0, max_n=0, max_byte_size=0):
             batch_count: int, number of batches
             max_n: total number of documents in all batches
             max_byte_size: total byte size of all documents in all batches
-        
+
         Yields:
             batches, which themselves are iterators of lines.
-        
+
         Raises:
             ValueError: neither max_n not max_byte_size specified
 
@@ -194,8 +204,8 @@ def batches_iterator(lines=None, batch_count=0, max_n=0, max_byte_size=0):
 
     for _ in range(batch_count):
         yield batch_iterator(
-                lines=lines, 
-                max_batch_n=max_n//batch_count, 
+                lines=lines,
+                max_batch_n=max_n//batch_count,
                 max_batch_byte_size=max_byte_size//batch_count,
         )
 
@@ -213,7 +223,7 @@ def main():
     logging.basicConfig(level=logging.INFO)
     args = args_parser().parse_args()
 
-    try: 
+    try:
         with feed() as f:
             for line in f:
                 print(line)
