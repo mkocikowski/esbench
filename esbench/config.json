@@ -31,12 +31,12 @@
 	"queries": {
 
 		"mlt": {
-			"fields": ["description.txt"], 
+			"fields": ["description"], 
 			"from": 0, 
 			"query": {
 				"more_like_this": {
 					"fields": [
-						"description.txt"
+						"description"
 					], 
 					"like_text": "USING V%(variable)s PROTECTING THE CARTRIDGE FROM WELDING HEAT", 
 					"max_query_terms": 25, 
@@ -48,49 +48,49 @@
 		}, 
 
 		"match": {
-			"fields": ["description.txt"], 
+			"fields": ["description"], 
 			"from": 0, 
 			"query": {
 				"match": {
-					"description.txt": "computing V%(variable)s device portable"
+					"description": "computing V%(variable)s device portable"
 				}
 			}, 
 			"size": 10
 		}, 
 
 		"match_no_rnd": {
-			"fields": ["description.txt"], 
+			"fields": ["description"], 
 			"from": 0, 
 			"query": {
 				"match": {
-					"description.txt": "computing device portable"
+					"description": "computing device portable"
 				}
 			}, 
 			"size": 10
 		}, 
 
 		"match_abs": {
-			"fields": ["abstract.txt"], 
+			"fields": ["abstract"], 
 			"from": 0, 
 			"query": {
 				"match": {
-					"description.txt": "computing V%(variable)s device portable"
+					"description": "computing V%(variable)s device portable"
 				}
 			}, 
 			"size": 10
 		}, 
 	
 		"match_srt": {
-			"fields": ["description.txt"], 
+			"fields": ["description"], 
 			"from": 0, 
 			"query": {
 				"match": {
-					"description.txt": "computing V%(variable)s device portable"
+					"description": "computing V%(variable)s device portable"
 				}
 			}, 
 			"size": 10, 
 			"sort": [
-				{"_meta.date_published": "desc"}
+				{"dates.date_published": "desc"}
 			]
 		}
 	
