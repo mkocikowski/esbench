@@ -1,100 +1,86 @@
 {
+    "index": {
+        "mappings": {
+            "doc": {
+                "_size": {
+                    "enabled": true, 
+                    "store": "yes"
+                }, 
+                "_source": {
+                    "enabled": true
+                }, 
+                "properties": {
+                    "abstract": {
+                        "store": "yes", 
+                        "type": "string"
+                    }
+                }
+            }
+        }, 
+        "settings": {
+            "index": {
+                "number_of_replicas": 0, 
+                "number_of_shards": 1
+            }
+        }
+    }, 
+    
+    "name_doctype": "doc", 
+    "name_index": "esbench_test", 
 
-	"name_index": "esbench_test",
-	"name_doctype": "doc",
+    "queries": {
 
-	"index": {
-	    "settings" : {
-			"index" : {
-				"number_of_shards" : 1,
-				"number_of_replicas" : 0
-			}
-		}, 
-		"mappings": {
-			"doc": {
-				"_source" : {"enabled" : true },
-				"_size" : {"enabled" : true, "store" : "yes"}, 
-				"properties": {
-					"abstract": {
-						"properties": {
-							"txt": {
-								"type": "string", 
-								"store": "yes"
-							}
-						}
-					}
-				}
-			}
-		}
-	},
+        "match_description": {
+            "fields": [
+                "description"
+            ], 
+            "from": 0, 
+            "query": {
+                "match": {
+                    "description": "computing V%(variable)s device portable"
+                }
+            }, 
+            "size": 10
+        }, 
 
-	"queries": {
+        "match_description_facet_date_histogram": {
+            "facets": {
+                "date_published": {
+                    "date_histogram": {
+                        "field" : "dates.date_published",
+                        "interval" : "month"
+                    }
+                }
+            }, 
+            "fields": [
+                "description"
+            ], 
+            "from": 0, 
+            "query": {
+                "match": {
+                    "description": "computing V%(variable)s device portable"
+                }
+            }, 
+            "size": 10
+        }, 
+        
+        "match_description_sorted_abstract": {
+            "fields": [
+                "description"
+            ], 
+            "from": 0, 
+            "query": {
+                "match": {
+                    "description": "computing V%(variable)s device portable"
+                }
+            }, 
+            "size": 10, 
+            "sort": [
+                {
+                    "abstract": "desc"
+                }
+            ]
+        } 
 
-		"mlt": {
-			"fields": ["description"], 
-			"from": 0, 
-			"query": {
-				"more_like_this": {
-					"fields": [
-						"description"
-					], 
-					"like_text": "USING V%(variable)s PROTECTING THE CARTRIDGE FROM WELDING HEAT", 
-					"max_query_terms": 25, 
-					"min_term_freq": 2, 
-					"percent_terms_to_match": 0.3
-				}
-			}, 
-			"size": 10
-		}, 
-
-		"match": {
-			"fields": ["description"], 
-			"from": 0, 
-			"query": {
-				"match": {
-					"description": "computing V%(variable)s device portable"
-				}
-			}, 
-			"size": 10
-		}, 
-
-		"match_no_rnd": {
-			"fields": ["description"], 
-			"from": 0, 
-			"query": {
-				"match": {
-					"description": "computing device portable"
-				}
-			}, 
-			"size": 10
-		}, 
-
-		"match_abs": {
-			"fields": ["abstract"], 
-			"from": 0, 
-			"query": {
-				"match": {
-					"description": "computing V%(variable)s device portable"
-				}
-			}, 
-			"size": 10
-		}, 
-	
-		"match_srt": {
-			"fields": ["description"], 
-			"from": 0, 
-			"query": {
-				"match": {
-					"description": "computing V%(variable)s device portable"
-				}
-			}, 
-			"size": 10, 
-			"sort": [
-				{"dates.date_published": "desc"}
-			]
-		}
-	
-	}
-	
+    }
 }
-
