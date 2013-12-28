@@ -137,7 +137,7 @@ class ApiFuncTest(unittest.TestCase):
 
     def test_index_get_stats(self):
         resp = esbench.api.index_get_stats(self.c, 'i1', '123_mlt,123_match')
-        self.assertEqual(resp.curl, """curl -XGET http://localhost:9200/i1/_stats?clear=true&docs=true&store=true&search=true&merge=true&indexing=true&fielddata=true&groups=123_mlt,123_match""")
+        self.assertEqual(resp.curl, """curl -XGET http://localhost:9200/i1/_stats?clear=true&docs=true&store=true&search=true&merge=true&indexing=true&fielddata=true&fields=*&groups=123_mlt,123_match""")
 
     def test_index_set_refresh_interval(self):
         resp = esbench.api.index_set_refresh_interval(self.c, 'i1', '5s')

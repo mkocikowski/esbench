@@ -146,7 +146,7 @@ def index_delete(conn, index):
 
 
 def index_get_stats(conn, index, groups):
-    path = "%s/_stats?clear=true&docs=true&store=true&search=true&merge=true&indexing=true&fielddata=true&groups=%s" % (index, groups)
+    path = "%s/_stats?clear=true&docs=true&store=true&search=true&merge=true&indexing=true&fielddata=true&fields=*&groups=%s" % (index, groups)
     resp = conn.get(path)
     return resp
 
@@ -181,5 +181,11 @@ def cluster_get_info(conn):
 
 def cluster_get_stats(conn):
     path = "_cluster/nodes/stats?indices=true&os=true&process=true&jvm=true&network=true&transport=true&http=true&fs=true&thread_pool=true"
+    resp = conn.get(path)
+    return resp
+
+
+def cluster_get_fielddata_stats(conn):
+    path = "_nodes/stats/indices/fielddata/*"
     resp = conn.get(path)
     return resp
