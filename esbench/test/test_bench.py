@@ -172,7 +172,7 @@ class BenchmarkTest(unittest.TestCase):
         self.bench.observe = _obs
         self.bench.run(batches)
         self.assertEqual(len(self.conn.conn.requests), 103)
-        self.assertEqual(self.conn.conn.requests[:4], [('PUT', None, '{"settings": {"index": {"number_of_replicas": 0, "number_of_shards": 1}}}'), ('DELETE', u'esbench_test', None), ('PUT', u'esbench_test', '{"mappings": {"doc": {"_size": {"enabled": true, "store": "yes"}, "properties": {"abstract": {"properties": {"txt": {"type": "string", "store": "yes"}}}}, "_source": {"enabled": true}}}, "settings": {"index": {"number_of_replicas": 0, "number_of_shards": 1}}}'), ('POST', u'esbench_test/doc', 'line_00')])
+        self.assertEqual(self.conn.conn.requests[:4], [('PUT', None, '{"settings": {"index": {"number_of_replicas": 0, "number_of_shards": 1}}}'), ('DELETE', u'esbench_test', None), ('PUT', u'esbench_test', '{"mappings": {"doc": {"_size": {"enabled": true, "store": "yes"}, "properties": {"abstract": {"type": "string", "store": "yes"}}, "_source": {"enabled": true}}}, "settings": {"index": {"number_of_replicas": 0, "number_of_shards": 1}}}'), ('POST', u'esbench_test/doc', 'line_00')])
         self.assertEqual(self.obs_count, 10)
 
         self.obs_count = 0

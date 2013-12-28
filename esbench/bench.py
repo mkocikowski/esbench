@@ -163,11 +163,30 @@ class Observation(object):
         return stats
 
 
-    def _cluster_stats(self, cluster_f=esbench.api.cluster_get_stats):
+    def _cluster_stats(self, cluster_f=esbench.api.cluster_get_stats, fielddata_f=esbench.api.cluster_get_fielddata_stats):
 
         try:
-            resp = esbench.api.cluster_get_stats(self.conn)
+            resp = cluster_f(self.conn)
             cluster_stats = json.loads(resp.data)
+
+            # the reason why getting fielddata here is not redundant with the
+            # fielddata gathered in _stats is that here information is
+            # gathered on per-node basis, which, in a multi-node setup, may be
+            # interesting.
+            #
+            try:
+                resp = fielddata_f(self.conn)
+                fielddata_stats = json.loads(resp.data)
+
+                for node in cluster_stats['nodes']:
+                    try:
+                        cluster_stats['nodes'][node]['indices']['fielddata']['fields'] = fielddata_stats['nodes'][node]['indices']['fielddata']['fields']
+                    except KeyError:
+                        logger.warning("couldn't get fielddata stats for node: %s", node)
+
+            except (TypeError, IOError) as exc:
+                logger.warning("couldn't get cluster fielddata stats: %s", exc)
+
         except (TypeError, IOError) as exc:
             logger.warning("couldn't get cluster stats: %s", exc)
             cluster_stats = None

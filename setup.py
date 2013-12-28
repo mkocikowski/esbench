@@ -11,7 +11,7 @@
 #
 from setuptools import setup
 
-ld = """Tool for benchmarking Elasticsearch nodes.
+ld = """Tool for benchmarking performance of Elasticsearch nodes.
 
 The two primary uses are for capacity planning (guessing how much oomph you
 need to do what what you think you need to do), and for performance tuning
@@ -29,8 +29,9 @@ The basic approach is to create an index with 1 primary and no replica shards
 representative use patterns against it, recording observations, adding more
 data until the performance drops below acceptable levels.
 
-This tool comes with 'batteries included'. See the README.md file, or even
-better, the project's github page.
+This tool comes with 'batteries included' (ie large sample data set,
+downloaded on demand). See the README.md file, or even better, the project's
+github page.
 
 """
 
@@ -40,7 +41,7 @@ setup(
     author = 'Mik Kocikowski',
     author_email = 'mkocikowski@gmail.com',
     url = 'https://github.com/mkocikowski/esbench',
-    description = 'Elasticsearch benchmark tool',
+    description = 'Elasticsearch performance benchmark tool',
     long_description = ld,
     install_requires = ['tabulate >= 0.6', ],
     packages = ['esbench', 'esbench.test'],

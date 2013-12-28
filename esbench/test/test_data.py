@@ -26,21 +26,34 @@ class DataTest(unittest.TestCase):
 
     def test_urls(self):
 
-        url = esbench.data.urls().next()
-        self.assertEqual(url, "https://s3-us-west-1.amazonaws.com/esbench/appl_aa.gz")
+        urls = list(esbench.data.urls(url_template=esbench.data.URL_TEMPLATE))
+        self.assertEqual(urls[0], "https://s3-us-west-1.amazonaws.com/esbench/appl_2005_aa.gz")
+        self.assertEqual(urls[75], "https://s3-us-west-1.amazonaws.com/esbench/appl_2006_aa.gz")
+        self.assertEqual(len(urls), 8*75)
+
+
+    def test_download(self):
+
+        resp = esbench.data.download("http://foo.com/bar")
+        self.assertIsNone(resp)
+        self.assertRaises(ValueError, esbench.data.download, "foobar")
 
 
     def test_get_data(self):
 
         line = esbench.data.get_data().next()
-        self.assertEqual(u'2009-01-01', json.loads(line)['_meta']['date_published'])
+        self.assertEqual(u'2005-01-06', json.loads(line)['dates']['date_published'])
+
+        # make sure that we can skip over nonexistent urls
+        line = esbench.data.get_data(urls_f=lambda x: ["http://foo.bar/baz", "https://s3-us-west-1.amazonaws.com/esbench/appl_2005_aa.gz"]).next()
+        self.assertEqual(u'2005-01-06', json.loads(line)['dates']['date_published'])
 
 
     def test_get_feed(self):
 
         with esbench.data.feed() as f:
             line = f.next()
-            self.assertEqual(u'2009-01-01', json.loads(line)['_meta']['date_published'])
+            self.assertEqual(u'2005-01-06', json.loads(line)['dates']['date_published'])
 
         with esbench.data.feed(lines_i=iter([1,2,3])) as f:
             line = f.next()
