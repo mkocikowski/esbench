@@ -148,6 +148,23 @@ The 'clear' command
 -------------------
 Deletes specified benchmarks and related observations. 
 
+Data
+----
+The default data set is US Patent Applications fror years 2005-2012. These
+have been pre-parsed and are available for download from S3. The downloading,
+unzipping, etc all happens automagically courtesy of the 'esbench.data'
+module. To get a sample document: 
+
+    python -m esbench.data | head -1 | python -m json.tool
+
+document counts / byte sizes are as follows: 2005: 16gb, 289617 docs, 2006:
+13gb, 294540 docs, 2007: 14gb, 300200 docs, 2008: 15gb, 320525 docs, 2009:
+16gb, 328237 docs, 2010: 16gb, 333211 docs, 2011: 16gb, 321182 docs, 2012:
+17gb, 331583 docs, for a total of 123gb of raw data. These files are pre
+parsed and stored in S3 so that there is a solid baseline immutable data set
+which can be easily shared. 
+
+
 License
 -------
 
