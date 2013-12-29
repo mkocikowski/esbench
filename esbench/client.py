@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 
 # @contextlib.contextmanager
 # def get_lines_iterator(path=None, count=None):
-# 
+#
 #     infile = None
 #     if path:
 #         infile = open(path, 'rU')
@@ -28,9 +28,9 @@ logger = logging.getLogger(__name__)
 #         lines = itertools.islice(infile, count)
 #     else:
 #         lines = itertools.islice(esbench.data.get_data(), count)
-# 
+#
 #     yield lines
-# 
+#
 #     if infile:
 #         infile.close()
 
@@ -54,7 +54,7 @@ def args_parser():
     parser_run.add_argument('--name', type=str, action='store', default="%s::%s" % (socket.gethostname(), esbench.bench.timestamp()), help="human readable name of the benchmark; (%(default)s)")
     parser_run.add_argument('--append', action='store_true', help="if set, append data to the index; (%(default)s)")
     parser_run.add_argument('--data', metavar='PATH', type=str, action='store', default=None, help="read data from PATH; set to /dev/stdin to read from stdin. Set this only if you want to provide your own data, by default US Patent Application data will be used; (%(default)s)")
-    parser_run.add_argument('maxsize', nargs="?", type=str, default='1mb', help="max size of the index, as either the number of documents or byte size. To index 100 documents, set it to 100; to index 1gb of documents, set it to 1gb. When setting the byte size of data, best effort will be made to run observations at even intervals, and the index bytesize will be ballpark, not the exact figure you specified; (%(default)s)")
+    parser_run.add_argument('maxsize', nargs="?", type=str, default='1mb', help="max size of the index, as either the number of documents or byte size. To index 100 documents, set it to 100; to index 1gb of documents, set it to 1gb. When setting the byte size of data, best effort will be made to run observations at even intervals, and the index bytesize will be ballpark, not the exact figure you specified. The default USPTO Patent Application data set has 123GB of data / 2.5m documents, so if you want more, you'll need to look elsewhere (or feed the same data in more than once); (%(default)s)")
 
     parser_show = subparsers.add_parser('show', help='show data from recorded benchmarks')
     parser_show.add_argument('-v', '--verbose', action='store_true')
@@ -93,7 +93,7 @@ def main():
     args = args_parser().parse_args()
     cmnd = " ".join(sys.argv[1:])
 
-    if args.verbose: 
+    if args.verbose:
         logging.basicConfig(level=logging.DEBUG, format='%(asctime)s %(process)d %(name)s %(funcName)s:%(lineno)d %(levelname)s %(message)s')
     else:
         logging.basicConfig(level=logging.INFO)
