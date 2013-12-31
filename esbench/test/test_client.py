@@ -22,6 +22,7 @@ class ClientTest(unittest.TestCase):
         self.assertEqual(args.__dict__,
             {
                 'no_optimize_calls': False,
+                'record_segments': False,
                 'verbose': False,
                 'segments': None,
                 'repetitions': 100,
@@ -38,7 +39,7 @@ class ClientTest(unittest.TestCase):
 
 
 #     def test_get_lines_iterator(self):
-# 
+#
 #         cm  = esbench.client.get_lines_iterator(path=None, count=10)
 #         self.assertIsInstance(cm, contextlib.GeneratorContextManager)
 #         with cm as lines:

@@ -18,23 +18,6 @@ import esbench.bench
 
 logger = logging.getLogger(__name__)
 
-# @contextlib.contextmanager
-# def get_lines_iterator(path=None, count=None):
-#
-#     infile = None
-#     if path:
-#         infile = open(path, 'rU')
-#         # if count is None, iterate through all elements
-#         lines = itertools.islice(infile, count)
-#     else:
-#         lines = itertools.islice(esbench.data.get_data(), count)
-#
-#     yield lines
-#
-#     if infile:
-#         infile.close()
-
-
 def args_parser():
 
     epilog = ""
@@ -50,6 +33,7 @@ def args_parser():
     parser_run.add_argument('--repetitions', metavar='N', type=int, default=100, help='run each query n times per observation; (%(default)i)')
     parser_run.add_argument('--no-load', action='store_true', help="if set, do not load data, just run observations")
     parser_run.add_argument('--no-optimize-calls', action='store_true', help="if set, do not optimize before observations")
+    parser_run.add_argument('--record-segments', action='store_true', help="if set, record detailed per-segment stats")
     parser_run.add_argument('--config-file-path', metavar='', type=str, default='%s/config.json' % (os.path.dirname(os.path.abspath(__file__)), ), help="path to json config file; (%(default)s)")
     parser_run.add_argument('--name', type=str, action='store', default="%s::%s" % (socket.gethostname(), esbench.bench.timestamp()), help="human readable name of the benchmark; (%(default)s)")
     parser_run.add_argument('--append', action='store_true', help="if set, append data to the index; (%(default)s)")
@@ -107,8 +91,6 @@ def main():
                 for _ in range(args.observations):
                     benchmark.observe()
             else:
-#                 with get_lines_iterator(path=args.data, count=args.n) as lines:
-#                     benchmark.run(lines)
                 max_n, max_byte_size = parse_maxsize(args.maxsize)
                 with esbench.data.feed(path=args.data) as feed:
                     batches = esbench.data.batches_iterator(lines=feed, batch_count=args.observations, max_n=max_n, max_byte_size=max_byte_size)

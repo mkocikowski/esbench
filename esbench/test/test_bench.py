@@ -7,11 +7,15 @@ import os.path
 import unittest
 import json
 import itertools
+import logging
 
 import esbench.bench
 import esbench.api
 import esbench.client
 import esbench.test.test_api
+
+
+logger = logging.getLogger(__name__)
 
 class BenchTest(unittest.TestCase):
 
@@ -80,9 +84,24 @@ class ObservationTest(unittest.TestCase):
         def _f(conn, index):
             return esbench.api.ApiResponse(200, 'ok', """{"ok":true,"_shards":{"total":1,"successful":1,"failed":0},"indices":{"test":{"shards":{"0":[{"routing":{"state":"STARTED","primary":true,"node":"YFJaFqa6Q-m-FPY_IRQ5nw"},"num_committed_segments":3,"num_search_segments":3,"segments":{"_a":{"generation":10,"num_docs":80,"deleted_docs":0,"size":"2.4mb","size_in_bytes":2524210,"committed":true,"search":true,"version":"4.4","compound":false},"_b":{"generation":11,"num_docs":10,"deleted_docs":0,"size":"271.7kb","size_in_bytes":278301,"committed":true,"search":true,"version":"4.4","compound":true},"_c":{"generation":12,"num_docs":10,"deleted_docs":0,"size":"225.3kb","size_in_bytes":230761,"committed":true,"search":true,"version":"4.4","compound":true}}}]}}}}""", "")
 
+        # default behavior is to not return detailed segment info
         s = self.observation._segments(segments_f=_f)
-        # pop detailed segment info
+        self.assertIsNone(s['segments'])
+
+        # no instantiate observation with 'record_segment_stats' set to True
+        self.observation = esbench.bench.Observation(
+                        conn = self.conn,
+                        stats_index_name = 'stats',
+                        benchmark_id = 'bench1',
+                        queries = self.queries,
+                        reps = 10,
+                        doc_index_name = 'test',
+                        doctype = 'doc',
+                        record_segment_stats = True,
+        )
+        s = self.observation._segments(segments_f=_f)
         self.assertEqual(sorted(['_a', '_b', '_c']), sorted(s.pop('segments').keys()))
+
         # aggregate segment info
         self.assertEqual(s, {'num_search_segments': 3, 't_optimize': None, 't_optimize_in_millis': None, 'num_committed_segments': 3})
 
@@ -126,6 +145,8 @@ class MockObservation(object):
     def __init__(self, *args, **kwargs):
         self.did_run = False
         self.did_record = False
+        self.__dict__.update(kwargs)
+#         logger.debug(self.__dict__)
 
     def run(self):
         self.did_run = True
@@ -202,6 +223,7 @@ class BenchmarkTest(unittest.TestCase):
 
     def test_observe(self):
         obs = self.bench.observe(obs_cls=MockObservation)
+        self.assertFalse(obs.record_segment_stats) # make sure record_segment_stats is initialized as False by bench.observe() by default
         self.assertEqual(self.conn.conn.requests, [('POST', u'esbench_test/_optimize?refresh=true&flush=true&wait_for_merge=true', None)])
         self.assertTrue(obs.did_run)
         self.assertTrue(obs.did_record)
@@ -220,5 +242,6 @@ class BenchmarkTest(unittest.TestCase):
 
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.DEBUG)
     unittest.main()
 

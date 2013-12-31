@@ -78,7 +78,8 @@ class Observation(object):
             queries=None,
             reps=None,
             doc_index_name=None,
-            doctype=None):
+            doctype=None,
+            record_segment_stats=False):
 
         self.conn = conn
         self.stats_index_name = stats_index_name
@@ -86,6 +87,7 @@ class Observation(object):
         self.reps = reps # how many times each query will be executed
         self.doc_index_name = doc_index_name
         self.doctype = doctype
+        self.record_segment_stats = record_segment_stats
 
         Observation._count += 1
         self.observation_sequence_no = Observation._count
@@ -130,7 +132,7 @@ class Observation(object):
             "num_committed_segments": _s['indices'][self.doc_index_name]['shards']['0'][0]['num_committed_segments'],
             "t_optimize": "%.2fs" % (self.t_optimize, ) if self.t_optimize else None,
             "t_optimize_in_millis": int(self.t_optimize * 1000) if self.t_optimize else None,
-            "segments": _s['indices'][self.doc_index_name]['shards']['0'][0]['segments'],
+            "segments": _s['indices'][self.doc_index_name]['shards']['0'][0]['segments'] if self.record_segment_stats else None,
         }
 
         return segments
@@ -255,7 +257,8 @@ class Benchmark(object):
                         queries = self.config['queries'],
                         reps = self.argv.repetitions,
                         doc_index_name = self.doc_index_name,
-                        doctype = self.doctype
+                        doctype = self.doctype,
+                        record_segment_stats = self.argv.record_segments,
         )
 
         if not self.argv.no_optimize_calls:
