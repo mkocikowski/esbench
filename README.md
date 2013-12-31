@@ -130,6 +130,32 @@ argument. There are 3 sections to the config file:
 You can specify the config file to use with the '--config-file-path' flag to
 the 'run' command. 
 
+Alternative data sources
+------------------------
+To use data other than the default USPTO Patent Application set, you need 2
+things: a source of json documents (formatted in a way to be acceptable to
+Elasticsearch), one document per line, and a config file with the 'queries'
+section modified to match the data you are feeding in. Assuming that your data
+is in a file 'mydata.json', and your config is in 'myconf.json', then this is
+what you want to do (the two lines below are equivalent, but the second is
+piping data into 'esbench run' on stdin, which you can use with tools like
+'esdump' to feed data from a running index into a test rig): 
+
+    esbench run --config-file-path myjson.json --data mydata.json
+    cat mydata.json | esbench run --config-file-path myjson.json --data /dev/stdin 
+
+So, let's say you have an index 'myindex' running on 'http://myhost:9200/',
+and you want to take your 'real' data from that server, and feed it into your
+benchmarking rig (you will need to install the
+[esdump](https://github.com/mkocikowski/estools)):
+
+    esdump --host myhost --port 9200 myindex | esbench run --config-file-path myjson.json --data /dev/stdin
+
+Note that the 'size' control still works, so if you want to only get 10mb of data from the source, you do: 
+    
+    esdump --host myhost --port 9200 myindex | esbench run --config-file-path myjson.json --data /dev/stdin 10mb
+    
+
 The 'show' command
 ------------------
 The 'show' command will retrieve previously recorded benchmark information
