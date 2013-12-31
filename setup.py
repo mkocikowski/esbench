@@ -37,7 +37,7 @@ github page.
 
 setup(
     name = 'esbench',
-    version = '0.0.8',
+    version = '0.1.0',
     author = 'Mik Kocikowski',
     author_email = 'mkocikowski@gmail.com',
     url = 'https://github.com/mkocikowski/esbench',
