@@ -233,8 +233,8 @@ class Benchmark(object):
         with open(argv.config_file_path, 'rU') as f:
             self.config = json.loads(f.read())
 
-        self.doc_index_name = self.config['name_index']
-        self.doctype = self.config['name_doctype']
+        self.doc_index_name = self.config['config']['name_index']
+        self.doctype = self.config['config']['name_doctype']
 
         self.stats_index_name = stats_index_name
 

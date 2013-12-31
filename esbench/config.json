@@ -1,32 +1,4 @@
 {
-    "index": {
-        "mappings": {
-            "doc": {
-                "_size": {
-                    "enabled": true, 
-                    "store": "yes"
-                }, 
-                "_source": {
-                    "enabled": true
-                }, 
-                "properties": {
-                    "abstract": {
-                        "store": "yes", 
-                        "type": "string"
-                    }
-                }
-            }
-        }, 
-        "settings": {
-            "index": {
-                "number_of_replicas": 0, 
-                "number_of_shards": 1
-            }
-        }
-    }, 
-    
-    "name_doctype": "doc", 
-    "name_index": "esbench_test", 
 
     "queries": {
 
@@ -81,6 +53,38 @@
                 }
             ]
         } 
+    }, 
 
-    }
+    "index": {
+        "mappings": {
+            "doc": {
+                "_size": {
+                    "enabled": true, 
+                    "store": "yes"
+                }, 
+                "_source": {
+                    "enabled": true
+                }, 
+                "properties": {
+                    "abstract": {
+                        "store": "yes", 
+                        "type": "string"
+                    }
+                }
+            }
+        }, 
+        "settings": {
+            "index": {
+                "number_of_replicas": 0, 
+                "number_of_shards": 1
+            }
+        }
+    }, 
+
+    "config": {
+        "name_doctype": "doc", 
+        "name_index": "esbench_test"
+    } 
+    
 }
+

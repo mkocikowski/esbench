@@ -102,26 +102,33 @@ interesting changes. Depending on the specified logging level, you will see
 information somewhat like that when running the benchmark: 
 
 	[...]
-    INFO:esbench.bench:loaded 169 lines into index 'esbench_test', size: 10501511 (10.00MB)
-    INFO:esbench.bench:optimize call: 4.04s
-    INFO:esbench.bench:beginning observation no: 10, 2013-12-20T01:10:09Z
-    INFO:esbench.bench:ran query 'match_no_rnd' 100 times in 0.48s
-    INFO:esbench.bench:ran query 'match_abs' 100 times in 0.29s
-    INFO:esbench.bench:ran query 'match' 100 times in 0.48s
-    INFO:esbench.bench:ran query 'mlt' 100 times in 0.12s
-    INFO:esbench.bench:ran query 'match_srt' 100 times in 0.66s
-    INFO:esbench.bench:finished observation no: 10, id: 32baae87, time: 2.033
-    INFO:esbench.bench:recorded observation into: esbench_stats/obs/32baae87
-    INFO:esbench.bench:load complete; loaded total 2626 lines into index 'esbench_test', total size: 105182234 (100.00mb)
-    INFO:esbench.bench:recorded benchmark into: esbench_stats/bench/4c5b7f33
+    INFO:esbench.bench:beginning observation no: 10, 2013-12-31T19:07:37Z
+    INFO:esbench.bench:ran query 'match_description_facet_date_histogram' 100 times in 0.34s
+    INFO:esbench.bench:ran query 'match_description_sorted_abstract' 100 times in 0.55s
+    INFO:esbench.bench:ran query 'match_description' 100 times in 0.33s
+    INFO:esbench.bench:finished observation no: 10, id: fc1596c0, time: 1.221
+    INFO:esbench.bench:recorded observation into: http://localhost:9200/esbench_stats/obs/fc1596c0
+    INFO:esbench.bench:load complete; loaded total 36 lines into index 'esbench_test', total size: 1396489 (1.00mb)
+    INFO:esbench.bench:recorded benchmark into: http://localhost:9200/esbench_stats/bench/2a4fb87d
     [...]
 
-As data is stored into the 'esbench_stats' index, you can access it raw (see the last
-log line for the URL). Once you've done that, you'll see why you want to use
-the 'show' command, described in the next section: 
+As data is stored into the 'esbench_stats' index, you can access it raw (see
+the last log line for the URL). This is the raw data, see the 'show' command
+for more user-friendly way of looking at the results. 
 
-	curl -XGET localhost:9200/esbench_stats/bench/4c5b7f33
+The config file
+---------------
+The 'run' command uses a json config file for its index and query settings.
+You can see the path to the default config file ('config.json') by running
+'esbench run --help' and looking for the value of '--config-file-path'
+argument. There are 3 sections to the config file: 
 
+1. 'queries': here you define the queries which will be run against the test data. Each key is a human-readable name, and the value is an ES query. This is the section which you want to customize to match your use patterns; if you are using your own data source with structure different than the default data source, then you definitely need to change the queries. 
+2. 'index': settings used for creating test 'esbench_test' index into which test data is loaded. Default shards 1/0, basic mapping. You can change this, specifically the mapping, if you want to experiment with different data sources. 
+3. 'config': basic configuration, will be expanded in 1.0.0 to allow to supplement command-line arguments, useless for now;
+
+You can specify the config file to use with the '--config-file-path' flag to
+the 'run' command. 
 
 The 'show' command
 ------------------
