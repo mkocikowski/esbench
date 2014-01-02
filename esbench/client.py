@@ -43,7 +43,7 @@ def args_parser():
     parser_show = subparsers.add_parser('show', help='show data from recorded benchmarks')
     parser_show.add_argument('-v', '--verbose', action='store_true')
     parser_show.add_argument('--sample', metavar='N', type=int, default=1, help='sample every Nth observation; (%(default)i)')
-    parser_show.add_argument('--format', choices=['tab', 'json', 'csv', 'svg'], default='tab', help='(%(default)s)')
+    parser_show.add_argument('--format', choices=['tab', 'json', 'csv'], default='tab', help='(%(default)s)')
     parser_show.add_argument('ids', nargs='*')
 
     parser_clear = subparsers.add_parser('clear', help='clear recorded benchmarks')
