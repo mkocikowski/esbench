@@ -343,6 +343,8 @@ class Benchmark(object):
             'config': self.config,
             'cluster': self._get_cluster_info(),
         }
+        stat['config']['queries'] = json.dumps(stat['config']['queries'])
+        stat['config']['index'] = json.dumps(stat['config']['index'])
 
         data = json.dumps(stat, sort_keys=True)
         path = '%s/bench/%s' % (self.stats_index_name, self,)

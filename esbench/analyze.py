@@ -8,6 +8,7 @@ import itertools
 import logging
 import json
 import collections
+import re
 
 import tabulate
 
@@ -31,7 +32,7 @@ def benchmarks(resp, benchmark_ids=None):
             else:
                 yield benchmark
     except KeyError:
-        logger.error("no benchmarks found", exc_info=False)
+        logger.warning("no benchmarks found", exc_info=False)
     return
 
 
@@ -46,17 +47,70 @@ def observations(resp):
         yield observation
 
 
-def stats(conn, benchmark_ids=None):
+def get(conn, benchmark_ids=None):
     for benchmark in benchmarks(_get_benchmarks(conn), benchmark_ids=benchmark_ids):
         for observation in observations(_get_observations(conn, benchmark['_id'])):
-            # each observation contains stats groups - here referred to as
-            # 'groups' which record information on each of the queries which
-            # form part of the benchmark. a stats group in context (number of
-            # doucments in the index, benchmark info) forms the basic unit of
-            # measured data
-            groups = observation['_source']['stats']['search']['groups']
-            for name, group in groups.items():
-                yield benchmark, observation, (name, group)
+            data = {
+                "benchmark": benchmark['_source'],
+                "observation": observation['_source'],
+            }
+            data[u'benchmark'][u'_id'] = benchmark['_id']
+            data[u'observation'][u'_id'] = observation['_id']
+            yield data
+
+
+def flat(data, matches=None):
+
+    if matches is None:
+        matches = ['.*']
+
+    if type(matches) is not list:
+        raise TypeError('matches must be a list of regular expression strings')
+
+    matches = [re.compile(m, re.IGNORECASE) for m in matches]
+    def passes(s):
+        for m in matches:
+            if not m.match(s):
+                return False
+        return True
+
+    return sorted([l for l in data if passes(l[0])])
+
+
+def flatten(data=None, flat=None, prefix=None):
+
+    if flat is None:
+        flat = list()
+
+    if type(data) in [str, unicode, int, float, bool, None]:
+        flat.append((prefix, data))
+
+    elif type(data) is dict:
+        for key in data:
+            flatten(data=data[key], flat=flat, prefix=("%s.%s" % (prefix, key)) if prefix else key)
+
+    elif type(data) is list:
+        for n, v in enumerate(data):
+            flatten(data=v, flat=flat, prefix=("%s.%i" % (prefix, n)) if prefix else str(n))
+
+    return flat
+
+
+
+
+
+
+
+def groups(conn, benchmark_ids=None):
+    for data in get(conn=conn, benchmark_ids=benchmark_ids):
+        # each observation contains stats groups - here referred to as
+        # 'groups' which record information on each of the queries which
+        # form part of the benchmark. a stats group in context (number of
+        # doucments in the index, benchmark info) forms the basic unit of
+        # measured data
+        gs = data['observation']['stats']['search']['groups']
+        for name, group in gs.items():
+            yield data['benchmark'], data['observation'], (name, group)
 
 
 StatRecord = collections.namedtuple('StatRecord', [
@@ -85,17 +139,17 @@ def stat_tuple(benchmark, observation, stat):
     stat_name, stat_data = stat
     record = StatRecord(
             bench_id=benchmark['_id'],
-            bench_name=benchmark['_source'].get('benchmark_name', 'unknown'),
+            bench_name=benchmark.get('benchmark_name', 'unknown'),
             obs_id=observation['_id'],
-            obs_no=observation['_source']['meta']['observation_sequence_no'],
-            doc_cnt=observation['_source']['stats']['docs']['count'],
-            seg_cnt=observation['_source']['segments']['num_search_segments'],
-            size_b=observation['_source']['stats']['store']['size_in_bytes'],
-            field_data_b=observation['_source']['stats']['fielddata']['memory_size_in_bytes'],
-            heap_used_b=[v['jvm']['mem']['heap_used_in_bytes'] for k, v in observation['_source']['cluster']['nodes'].items()][0],
-            heap_used_pct=[v['jvm']['mem']['heap_used_percent'] for k, v in observation['_source']['cluster']['nodes'].items()][0],
-            open_fd=[v['process']['open_file_descriptors'] for k, v in observation['_source']['cluster']['nodes'].items()][0],
-            t_index_ms=observation['_source']['stats']['indexing']['index_time_in_millis'],
+            obs_no=observation['meta']['observation_sequence_no'],
+            doc_cnt=observation['stats']['docs']['count'],
+            seg_cnt=observation['segments']['num_search_segments'],
+            size_b=observation['stats']['store']['size_in_bytes'],
+            field_data_b=observation['stats']['fielddata']['memory_size_in_bytes'],
+            heap_used_b=[v['jvm']['mem']['heap_used_in_bytes'] for _, v in observation['cluster']['nodes'].items()][0],
+            heap_used_pct=[v['jvm']['mem']['heap_used_percent'] for _, v in observation['cluster']['nodes'].items()][0],
+            open_fd=[v['process']['open_file_descriptors'] for _, v in observation['cluster']['nodes'].items()][0],
+            t_index_ms=observation['stats']['indexing']['index_time_in_millis'],
             query_name=stat_name,
             n_query=stat_data['query_total'],
             t_query_ms=stat_data['query_time_in_millis'],
@@ -105,17 +159,17 @@ def stat_tuple(benchmark, observation, stat):
     return record
 
 
-def get_stat_tuples(conn, benchmark_ids=None, sort_f=lambda stat: (stat.bench_id, stat.query_name, stat.obs_no)):
+def get_group_tuples(conn, benchmark_ids=None, sort_f=lambda stat: (stat.bench_id, stat.query_name, stat.obs_no)):
     # set sort_f to None to not sort
-    data = [stat_tuple(benchmark, observation, stat) for benchmark, observation, stat in stats(conn, benchmark_ids)]
+    data = [stat_tuple(benchmark, observation, stat) for benchmark, observation, stat in groups(conn, benchmark_ids)]
     data = sorted(data, key=sort_f)
     return data
 
 
 
 
-def show_benchmarks(conn, benchmark_ids=None, sample=1, format='tab', indent=4):
-    data = get_stat_tuples(conn, benchmark_ids)
+def show_benchmarks(conn, benchmark_ids=None, sample=1, fmt='tab', indent=4):
+    data = get_group_tuples(conn, benchmark_ids)
     if data:
         legend = """
 ------------------------------------------------------------------------------
