@@ -116,8 +116,8 @@ def filter_tuples(tuples=None, matches=None, key_f=lambda x: x[0]):
     if matches is None:
         matches = ['.*']
 
-    if type(matches) is not list:
-        raise TypeError("matches must be a list of regular expression strings")
+    if type(matches) not in [list, set]:
+        raise TypeError("matches must be a list|set of regular expression strings")
 
     compiled = [re.compile(m, re.IGNORECASE) for m in matches]
     def passes(s):
@@ -190,42 +190,56 @@ def flatten_container(container=None):
     return flat
 
 
-def group_benchmarks(data=None, fields=None):
+def group_observations(data=None, fields=None):
 
-    d_flattened = [flatten_container(d) for d in data]
+    # returns a list of observations, where each observation is a list of
+    # (fieldname, value) tuples
+    data_flattened = [flatten_container(d) for d in data]
 
-    if not fields:
-        fields = [
-            'observation.meta.benchmark_id',
-            'observation.meta.observation_id',
-            'observation.meta.observation_sequence_no',
-            'observation.segments.num_committed_segments',
-#             'observation.segments.num_search_segments',
-            'observation.stats.docs.count',
-            'observation.stats.fielddata.memory_size_in_bytes',
-            'observation.stats.search.groups.*query_time_in_millis',
-        ]
-#     fields = None
-    d_filtered = [filter_tuples(tuples=t, matches=fields) for t in d_flattened]
+    # filter out tuples in each observation according to pattern. make sure
+    # that required fields (fields used for sorting and grouping down the
+    # line) are included.
+    fields_required = [
+        'benchmark.benchmark_start',
+        'observation.meta.benchmark_id',
+        'observation.meta.observation_id',
+        'observation.meta.observation_sequence_no',
+    ]
+    fields_required.extend(fields or [])
+    data_filtered = [filter_tuples(tuples=t, matches=set(fields_required)) for t in data_flattened]
 
-
+    # sort observations based on their benchmark_id and obsewrvation_sequence_no
     def sort_f(d):
         _d = dict(d)
         return (_d['observation.meta.benchmark_id'], _d['observation.meta.observation_sequence_no'])
+    data_sorted = sorted(data_filtered, key=sort_f)
 
-    d_sorted = sorted(d_filtered, key=sort_f)
+    # group observations into a list of benchmarks, where each benchmark is a
+    # list of observations, where each observation is [see comments above]
+    groups = [list(benchmark_obs) for benchmark_id, benchmark_obs in itertools.groupby(data_sorted, lambda x: dict(x)['observation.meta.benchmark_id'])]
+    # sort benchmark groups on timestamp benchmark started
+    groups_sorted = sorted(groups, key=lambda x: dict(x[0])['benchmark.benchmark_start'])
 
-
-    groups = [list(benchmark_obs) for benchmark_id, benchmark_obs in itertools.groupby(d_sorted, lambda x: dict(x)['observation.meta.benchmark_id'])]
-    return groups
+    return groups_sorted
 
 
 def show_benchmarks(conn=None, benchmark_ids=None, fields=None):
 
     data = list(get_data(conn=conn, benchmark_ids=benchmark_ids))
-    groups = group_benchmarks(data)
 
-    for b in groups:
+    fields = [
+        '(?!observation.segments.segments)',
+        'observation.meta.benchmark_id',
+        'observation.meta.observation_id',
+        'observation.meta.observation_sequence_no',
+        'observation.segments.num_committed_segments',
+        'observation.stats.docs.count',
+        'observation.stats.fielddata.memory_size_in_bytes',
+        'observation.stats.search.groups.*query_time_in_millis',
+    ]
+    benchmarks = group_observations(data)
+
+    for b in benchmarks:
         keys = [".".join(t[0].split(".")[-2:]) for t in b[0]]
         values = [[t[1] for t in f] for f in b]
         print(tabulate.tabulate(values, headers=keys))
