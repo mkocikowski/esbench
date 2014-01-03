@@ -9,6 +9,7 @@ import logging
 import json
 import collections
 import re
+import types
 
 import tabulate
 
@@ -19,11 +20,16 @@ logger = logging.getLogger(__name__)
 
 
 def _get_benchmarks(conn=None, stats_index_name=esbench.STATS_INDEX_NAME):
+    """Call the ES server for raw benchmark records."""
+
     path = "%s/bench/_search?sort=benchmark_start:asc&size=100" % (stats_index_name, )
     resp = conn.get(path)
     return resp
 
-def benchmarks(resp, benchmark_ids=None):
+
+def _benchmarks(resp, benchmark_ids=None):
+    """Process response from _get_benchmarks(), yielding benchmark dicts."""
+
     data = json.loads(resp.data)
     try:
         for benchmark in data['hits']['hits']:
@@ -36,20 +42,42 @@ def benchmarks(resp, benchmark_ids=None):
     return
 
 
-def _get_observations(conn, benchmark_id, stats_index_name=esbench.STATS_INDEX_NAME):
+def _get_observations(conn=None, benchmark_id=None, stats_index_name=esbench.STATS_INDEX_NAME):
+    """Call the ES server for raw observation records."""
+
+    if not benchmark_id:
+        raise ValueError("invalid 'benchmark_id'")
+
     path = "%s/obs/_search?q=meta.benchmark_id:%s&sort=meta.observation_start:asc&size=10000" % (stats_index_name, benchmark_id, )
     resp = conn.get(path)
     return resp
 
-def observations(resp):
+
+def _observations(resp):
+    """Process response from _get_observations(), yielding observation dicts."""
+
     data = json.loads(resp.data)
     for observation in data['hits']['hits']:
         yield observation
 
 
-def get(conn, benchmark_ids=None):
-    for benchmark in benchmarks(_get_benchmarks(conn), benchmark_ids=benchmark_ids):
-        for observation in observations(_get_observations(conn, benchmark['_id'])):
+def get_data(conn=None, benchmark_ids=None):
+    """Get benchmark and observation data.
+
+    Args:
+        conn: instance of esbench.api.Conn
+        benchmark_ids: list of str, ids of benchmarks to be included, default
+            None. When None, include all benchmarks.
+
+    Yields:
+        For each observation associated with included benchmark a dict where
+        top level keys are 'benchmark' and 'observation', containing pertinent
+        data. Effectively, data is denormalized, with the 'benchmark' element
+        being the same for all observations for that benchmark.
+    """
+
+    for benchmark in _benchmarks(_get_benchmarks(conn=conn), benchmark_ids=benchmark_ids):
+        for observation in _observations(_get_observations(conn=conn, benchmark_id=benchmark['_id'])):
             data = {
                 "benchmark": benchmark['_source'],
                 "observation": observation['_source'],
@@ -59,127 +87,236 @@ def get(conn, benchmark_ids=None):
             yield data
 
 
-def flat(data, matches=None):
+def filter_tuples(tuples=None, matches=None, key_f=lambda x: x[0]):
+    """Return tuples matching any of provided regex[s].
+
+    Given a list of tuples and a list of regex strings, apply the regexes to
+    the specified tuple element, returning only tuples which match at least
+    one regex.
+
+    Args:
+        tuples: list of tuples
+        matches: list of regex strings, defaulting to ['.*']
+        key_f: function for selecting tuple element against which regex[s]
+            will be matched, defaults to the first element of each tuple
+            (lambda x: x[0])
+
+    Returns:
+        sorted list of tuples, where at least one regex matched. The key for
+        sorting is the same key used for matching.
+
+    Raises:
+        TypeError on invalid input
+
+    """
+
+    if type(tuples) is not list:
+        raise TypeError("'tuples' must be a list of tuples")
 
     if matches is None:
         matches = ['.*']
 
     if type(matches) is not list:
-        raise TypeError('matches must be a list of regular expression strings')
+        raise TypeError("matches must be a list of regular expression strings")
 
-    matches = [re.compile(m, re.IGNORECASE) for m in matches]
+    compiled = [re.compile(m, re.IGNORECASE) for m in matches]
     def passes(s):
-        for m in matches:
-            if not m.match(s):
-                return False
-        return True
+        for r in compiled:
+            if r.match(s):
+                return True
+        return False
 
-    return sorted([l for l in data if passes(l[0])])
+    return sorted([t for t in tuples if passes(key_f(t))], key=key_f)
 
 
-def flatten(data=None, flat=None, prefix=None):
+# def flatten_container(container=None, flat=None, prefix=None):
+#     """Flattens a container (dict, list, set).
+#
+#     """
+#
+#     if flat is None:
+#         flat = list()
+#
+#     if type(container) in [str, unicode, int, float, bool, None]:
+#         flat.append((prefix, container))
+#
+#     elif type(container) is dict:
+#         for key in container:
+#             flatten_container(container=container[key], flat=flat, prefix=("%s.%s" % (prefix, key)) if prefix else key)
+#
+#     elif type(container) is list:
+#         for n, v in enumerate(container):
+#             flatten_container(container=v, flat=flat, prefix=("%s.%i" % (prefix, n)) if prefix else str(n))
+#
+#     return flat
 
-    if flat is None:
-        flat = list()
 
-    if type(data) in [str, unicode, int, float, bool, None]:
-        flat.append((prefix, data))
+def flatten_container(container=None):
+    """Flattens a container (dict, list, set).
 
-    elif type(data) is dict:
-        for key in data:
-            flatten(data=data[key], flat=flat, prefix=("%s.%s" % (prefix, key)) if prefix else key)
+    Args:
+        container: a dict, list, set, tuple, any nested combination of.
 
-    elif type(data) is list:
-        for n, v in enumerate(data):
-            flatten(data=v, flat=flat, prefix=("%s.%i" % (prefix, n)) if prefix else str(n))
+    Returns:
+        list of tuples (name, value) where name is a flattened, period-joined
+        list of dict keys and list indexes identifying the value's original
+        location in the source container, for example: "foo.bar.2.baz". The
+        'value' is an int, float, str, unicode, bool, or None.
+
+    """
+
+    def _flatten(container=container, prefix=None):
+
+        if type(container) in [str, unicode, int, long, float, bool, types.NoneType]:
+            flat.append((prefix, container))
+
+        elif type(container) is dict:
+            for key in container:
+                _flatten(container=container[key], prefix=("%s.%s" % (prefix, key)) if prefix else key)
+
+        elif type(container) in [list, set, tuple]:
+            for n, v in enumerate(container):
+                _flatten(container=v, prefix=("%s.%i" % (prefix, n)) if prefix else str(n))
+
+        else:
+            raise ValueError("cannot process element: %s" % container)
+
+    flat = list()
+    _flatten()
+
+#     for f in flat:
+#         print(f[0])
 
     return flat
 
 
+def group_benchmarks(data=None, fields=None):
+
+    d_flattened = [flatten_container(d) for d in data]
+
+    if not fields:
+        fields = [
+            'observation.meta.benchmark_id',
+            'observation.meta.observation_id',
+            'observation.meta.observation_sequence_no',
+            'observation.segments.num_committed_segments',
+#             'observation.segments.num_search_segments',
+            'observation.stats.docs.count',
+            'observation.stats.fielddata.memory_size_in_bytes',
+            'observation.stats.search.groups.*query_time_in_millis',
+        ]
+#     fields = None
+    d_filtered = [filter_tuples(tuples=t, matches=fields) for t in d_flattened]
+
+
+    def sort_f(d):
+        _d = dict(d)
+        return (_d['observation.meta.benchmark_id'], _d['observation.meta.observation_sequence_no'])
+
+    d_sorted = sorted(d_filtered, key=sort_f)
+
+
+    groups = [list(benchmark_obs) for benchmark_id, benchmark_obs in itertools.groupby(d_sorted, lambda x: dict(x)['observation.meta.benchmark_id'])]
+    return groups
+
+
+def show_benchmarks(conn=None, benchmark_ids=None, fields=None):
+
+    data = list(get_data(conn=conn, benchmark_ids=benchmark_ids))
+    groups = group_benchmarks(data)
+
+    for b in groups:
+        keys = [".".join(t[0].split(".")[-2:]) for t in b[0]]
+        values = [[t[1] for t in f] for f in b]
+        print(tabulate.tabulate(values, headers=keys))
 
 
 
+#
+# def groups(conn, benchmark_ids=None):
+#     for data in get_data(conn=conn, benchmark_ids=benchmark_ids):
+#         # each observation contains stats groups - here referred to as
+#         # 'groups' which record information on each of the queries which
+#         # form part of the benchmark. a stats group in context (number of
+#         # doucments in the index, benchmark info) forms the basic unit of
+#         # measured data
+#         gs = data['observation']['stats']['search']['groups']
+#         for name, group in gs.items():
+#             yield data['benchmark'], data['observation'], (name, group)
+#
+#
+# StatRecord = collections.namedtuple('StatRecord', [
+#         'bench_id',
+#         'bench_name',
+#         'obs_id',
+#         'obs_no',
+#         'doc_cnt',
+#         'seg_cnt',
+#         'size_b',
+#         'field_data_b',
+#         'heap_used_b',
+#         'heap_used_pct',
+#         'open_fd',
+#         't_index_ms',
+#         'query_name',
+#         'n_query',
+#         't_query_ms',
+#         't_fetch_ms',
+#         't_client_ms',
+#     ]
+# )
+#
+#
+# def stat_tuple(benchmark, observation, stat):
+#     stat_name, stat_data = stat
+#     record = StatRecord(
+#             bench_id=benchmark['_id'],
+#             bench_name=benchmark.get('benchmark_name', 'unknown'),
+#             obs_id=observation['_id'],
+#             obs_no=observation['meta']['observation_sequence_no'],
+#             doc_cnt=observation['stats']['docs']['count'],
+#             seg_cnt=observation['segments']['num_search_segments'],
+#             size_b=observation['stats']['store']['size_in_bytes'],
+#             field_data_b=observation['stats']['fielddata']['memory_size_in_bytes'],
+#             heap_used_b=[v['jvm']['mem']['heap_used_in_bytes'] for _, v in observation['cluster']['nodes'].items()][0],
+#             heap_used_pct=[v['jvm']['mem']['heap_used_percent'] for _, v in observation['cluster']['nodes'].items()][0],
+#             open_fd=[v['process']['open_file_descriptors'] for _, v in observation['cluster']['nodes'].items()][0],
+#             t_index_ms=observation['stats']['indexing']['index_time_in_millis'],
+#             query_name=stat_name,
+#             n_query=stat_data['query_total'],
+#             t_query_ms=stat_data['query_time_in_millis'],
+#             t_fetch_ms=stat_data['fetch_time_in_millis'],
+#             t_client_ms=stat_data['client_time_in_millis'],
+#     )
+#     return record
+#
+#
+# def get_group_tuples(conn, benchmark_ids=None, sort_f=lambda stat: (stat.bench_id, stat.query_name, stat.obs_no)):
+#     # set sort_f to None to not sort
+#     data = [stat_tuple(benchmark, observation, stat) for benchmark, observation, stat in groups(conn, benchmark_ids)]
+#     data = sorted(data, key=sort_f)
+#     return data
+#
+#
+#
+#
+# def show_benchmarks(conn, benchmark_ids=None, sample=1, fmt='tab', indent=4):
+#     data = get_group_tuples(conn, benchmark_ids)
+#     if data:
+#         legend = """
+# ------------------------------------------------------------------------------
+# All times recorded aggregate, look at the related n_ value. So if 'n_query' == 100, and 't_query_ms' == 1000, it means
+# that it took 1000ms to run the query 100 times, so 10ms per query.
+# ------------------------------------------------------------------------------
+# """.strip()
+#         print(legend)
+#         print(tabulate.tabulate(data, headers=data[0]._fields))
+#         print(legend)
+#
+#
+#
 
 
-def groups(conn, benchmark_ids=None):
-    for data in get(conn=conn, benchmark_ids=benchmark_ids):
-        # each observation contains stats groups - here referred to as
-        # 'groups' which record information on each of the queries which
-        # form part of the benchmark. a stats group in context (number of
-        # doucments in the index, benchmark info) forms the basic unit of
-        # measured data
-        gs = data['observation']['stats']['search']['groups']
-        for name, group in gs.items():
-            yield data['benchmark'], data['observation'], (name, group)
-
-
-StatRecord = collections.namedtuple('StatRecord', [
-        'bench_id',
-        'bench_name',
-        'obs_id',
-        'obs_no',
-        'doc_cnt',
-        'seg_cnt',
-        'size_b',
-        'field_data_b',
-        'heap_used_b',
-        'heap_used_pct',
-        'open_fd',
-        't_index_ms',
-        'query_name',
-        'n_query',
-        't_query_ms',
-        't_fetch_ms',
-        't_client_ms',
-    ]
-)
-
-
-def stat_tuple(benchmark, observation, stat):
-    stat_name, stat_data = stat
-    record = StatRecord(
-            bench_id=benchmark['_id'],
-            bench_name=benchmark.get('benchmark_name', 'unknown'),
-            obs_id=observation['_id'],
-            obs_no=observation['meta']['observation_sequence_no'],
-            doc_cnt=observation['stats']['docs']['count'],
-            seg_cnt=observation['segments']['num_search_segments'],
-            size_b=observation['stats']['store']['size_in_bytes'],
-            field_data_b=observation['stats']['fielddata']['memory_size_in_bytes'],
-            heap_used_b=[v['jvm']['mem']['heap_used_in_bytes'] for _, v in observation['cluster']['nodes'].items()][0],
-            heap_used_pct=[v['jvm']['mem']['heap_used_percent'] for _, v in observation['cluster']['nodes'].items()][0],
-            open_fd=[v['process']['open_file_descriptors'] for _, v in observation['cluster']['nodes'].items()][0],
-            t_index_ms=observation['stats']['indexing']['index_time_in_millis'],
-            query_name=stat_name,
-            n_query=stat_data['query_total'],
-            t_query_ms=stat_data['query_time_in_millis'],
-            t_fetch_ms=stat_data['fetch_time_in_millis'],
-            t_client_ms=stat_data['client_time_in_millis'],
-    )
-    return record
-
-
-def get_group_tuples(conn, benchmark_ids=None, sort_f=lambda stat: (stat.bench_id, stat.query_name, stat.obs_no)):
-    # set sort_f to None to not sort
-    data = [stat_tuple(benchmark, observation, stat) for benchmark, observation, stat in groups(conn, benchmark_ids)]
-    data = sorted(data, key=sort_f)
-    return data
-
-
-
-
-def show_benchmarks(conn, benchmark_ids=None, sample=1, fmt='tab', indent=4):
-    data = get_group_tuples(conn, benchmark_ids)
-    if data:
-        legend = """
-------------------------------------------------------------------------------
-All times recorded aggregate, look at the related n_ value. So if 'n_query' == 100, and 't_query_ms' == 1000, it means
-that it took 1000ms to run the query 100 times, so 10ms per query.
-------------------------------------------------------------------------------
-""".strip()
-        print(legend)
-        print(tabulate.tabulate(data, headers=data[0]._fields))
-        print(legend)
 
 
 def dump_benchmarks(conn=None, ids=None, stats_index_name=esbench.STATS_INDEX_NAME):
@@ -188,10 +325,10 @@ def dump_benchmarks(conn=None, ids=None, stats_index_name=esbench.STATS_INDEX_NA
     You can save these calls to a file, and then replay them somewhere else.
     """
 
-    for benchmark in benchmarks(_get_benchmarks(conn=conn, stats_index_name=stats_index_name), ids):
+    for benchmark in _benchmarks(_get_benchmarks(conn=conn, stats_index_name=stats_index_name), ids):
         curl = """curl -XPUT 'http://localhost:9200/%s/bench/%s' -d '%s'""" % (stats_index_name, benchmark['_id'], json.dumps(benchmark['_source']))
         print(curl)
-        for o in observations(_get_observations(conn, benchmark['_id'], stats_index_name=stats_index_name)):
+        for o in _observations(_get_observations(conn, benchmark['_id'], stats_index_name=stats_index_name)):
             curl = """curl -XPUT 'http://localhost:9200/%s/obs/%s' -d '%s'""" % (stats_index_name, o['_id'], json.dumps(o['_source']))
             print(curl)
     return
@@ -204,8 +341,8 @@ def delete_benchmarks(conn=None, benchmark_ids=None, stats_index_name=esbench.ST
         logger.info(resp.curl)
 
     else:
-        for benchmark in benchmarks(_get_benchmarks(conn, stats_index_name=stats_index_name), benchmark_ids=benchmark_ids):
-            for observation in observations(_get_observations(conn, benchmark_id=benchmark['_id'], stats_index_name=stats_index_name)):
+        for benchmark in _benchmarks(_get_benchmarks(conn, stats_index_name=stats_index_name), benchmark_ids=benchmark_ids):
+            for observation in _observations(_get_observations(conn, benchmark_id=benchmark['_id'], stats_index_name=stats_index_name)):
                 path = "%s/obs/%s" % (stats_index_name, observation['_id'], )
                 resp = conn.delete(path)
                 logger.info(resp.curl)

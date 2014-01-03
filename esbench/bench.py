@@ -349,6 +349,8 @@ class Benchmark(object):
         data = json.dumps(stat, sort_keys=True)
         path = '%s/bench/%s' % (self.stats_index_name, self,)
         resp = self.conn.put(path, data)
+        if resp.status not in [200, 201]:
+            raise IOError("failed to record benchmark")
         logger.info("recorded benchmark into: http://%s:%i/%s", self.conn.host, self.conn.port, path)
         return resp
 

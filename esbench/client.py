@@ -99,7 +99,8 @@ def main():
             benchmark.record()
 
         elif args.command == 'show':
-            esbench.analyze.show_benchmarks(conn, benchmark_ids=args.ids, sample=args.sample, fmt=args.format)
+#             esbench.analyze.show_benchmarks(conn, benchmark_ids=args.ids, sample=args.sample, fmt=args.format)
+            esbench.analyze.show_benchmarks(conn=conn, benchmark_ids=args.ids)
 
         elif args.command == 'dump':
             esbench.analyze.dump_benchmarks(conn, args.ids)
