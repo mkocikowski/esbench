@@ -86,13 +86,14 @@ class DataTest(unittest.TestCase):
             f = esbench.analyze.flatten_container(container=data)
             d = esbench.analyze.filter_tuples(f)
             self.assertEqual(sorted(f), d)
-            self.assertEqual(esbench.analyze.filter_tuples(f, matches=['benchmark']), esbench.analyze.filter_tuples(f, matches=['benchmark.*']))
+            self.assertEqual(esbench.analyze.filter_tuples(f, pattern='benchmark'), esbench.analyze.filter_tuples(f, pattern='benchmark.*'))
 
 
     def test_group_observations(self):
         data = list(esbench.analyze.get_data(None))
         # just check if the thing basically works
-        benchmarks = esbench.analyze.group_observations(data=data)
+        benchmarks = esbench.analyze.group_observations(data=data, fields=esbench.analyze.FIELDS)
+#         print(json.dumps(benchmarks, indent=4))
         self.assertEqual('observation.meta.observation_id',benchmarks[0][0][2][0])
         self.assertEqual('4391531c',benchmarks[0][0][2][1])
 

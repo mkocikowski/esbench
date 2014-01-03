@@ -100,7 +100,7 @@ def main():
 
         elif args.command == 'show':
 #             esbench.analyze.show_benchmarks(conn, benchmark_ids=args.ids, sample=args.sample, fmt=args.format)
-            esbench.analyze.show_benchmarks(conn=conn, benchmark_ids=args.ids)
+            esbench.analyze.show_benchmarks(conn=conn, benchmark_ids=args.ids, fields=esbench.analyze.FIELDS)
 
         elif args.command == 'dump':
             esbench.analyze.dump_benchmarks(conn, args.ids)

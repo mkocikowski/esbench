@@ -87,23 +87,22 @@ def get_data(conn=None, benchmark_ids=None):
             yield data
 
 
-def filter_tuples(tuples=None, matches=None, key_f=lambda x: x[0]):
-    """Return tuples matching any of provided regex[s].
+def filter_tuples(tuples=None, pattern=".*", key_f=lambda x: x[0]):
+    """Return tuples matching provided regex.
 
-    Given a list of tuples and a list of regex strings, apply the regexes to
-    the specified tuple element, returning only tuples which match at least
-    one regex.
+    Given a list of tuples and a regex pattern string, apply the regex to
+    the specified tuple element, returning only tuples which match.
 
     Args:
         tuples: list of tuples
-        matches: list of regex strings, defaulting to ['.*']
-        key_f: function for selecting tuple element against which regex[s]
+        pattern: string, regex pattern defauls to '.*'
+        key_f: function for selecting tuple element against which the regex
             will be matched, defaults to the first element of each tuple
             (lambda x: x[0])
 
     Returns:
-        sorted list of tuples, where at least one regex matched. The key for
-        sorting is the same key used for matching.
+        sorted list of tuples where regex matched. The key for sorting is the
+        same key used for matching.
 
     Raises:
         TypeError on invalid input
@@ -113,20 +112,20 @@ def filter_tuples(tuples=None, matches=None, key_f=lambda x: x[0]):
     if type(tuples) is not list:
         raise TypeError("'tuples' must be a list of tuples")
 
-    if matches is None:
-        matches = ['.*']
+    compiled = re.compile(pattern, re.IGNORECASE)
+    filtered = [t for t in tuples if compiled.match(key_f(t))]
+    return sorted(filtered, key=key_f)
 
-    if type(matches) not in [list, set]:
-        raise TypeError("matches must be a list|set of regular expression strings")
-
-    compiled = [re.compile(m, re.IGNORECASE) for m in matches]
-    def passes(s):
-        for r in compiled:
-            if r.match(s):
-                return True
-        return False
-
-    return sorted([t for t in tuples if passes(key_f(t))], key=key_f)
+#
+#
+#     compiled = [re.compile(m, re.IGNORECASE) for m in matches]
+#     def passes(s):
+#         for r in compiled:
+#             if r.match(s):
+#                 return True
+#         return False
+#
+#     return sorted([t for t in tuples if passes(key_f(t))], key=key_f)
 
 
 # def flatten_container(container=None, flat=None, prefix=None):
@@ -196,17 +195,8 @@ def group_observations(data=None, fields=None):
     # (fieldname, value) tuples
     data_flattened = [flatten_container(d) for d in data]
 
-    # filter out tuples in each observation according to pattern. make sure
-    # that required fields (fields used for sorting and grouping down the
-    # line) are included.
-    fields_required = [
-        'benchmark.benchmark_start',
-        'observation.meta.benchmark_id',
-        'observation.meta.observation_id',
-        'observation.meta.observation_sequence_no',
-    ]
-    fields_required.extend(fields or [])
-    data_filtered = [filter_tuples(tuples=t, matches=set(fields_required)) for t in data_flattened]
+    # filter out tuples in each observation according to pattern.
+    data_filtered = [filter_tuples(tuples=t, pattern=fields) for t in data_flattened]
 
     # sort observations based on their benchmark_id and obsewrvation_sequence_no
     def sort_f(d):
@@ -223,21 +213,25 @@ def group_observations(data=None, fields=None):
     return groups_sorted
 
 
+FIELDS = (
+    "(?!observation.segments.segments)"
+        "("
+            "(benchmark.benchmark_start)|"
+            "(observation.meta.benchmark_id)|"
+            "(observation.meta.observation_id)|"
+            "(observation.meta.observation_sequence_no)|"
+            "(observation.segments.num_committed_segments)|"
+            "(observation.stats.docs.count)|"
+            "(observation.stats.fielddata.memory_size_in_bytes)|"
+            "(observation.stats.search.groups.*query_time_in_millis)"
+        ")"
+
+)
+
 def show_benchmarks(conn=None, benchmark_ids=None, fields=None):
 
     data = list(get_data(conn=conn, benchmark_ids=benchmark_ids))
-
-    fields = [
-        '(?!observation.segments.segments)',
-        'observation.meta.benchmark_id',
-        'observation.meta.observation_id',
-        'observation.meta.observation_sequence_no',
-        'observation.segments.num_committed_segments',
-        'observation.stats.docs.count',
-        'observation.stats.fielddata.memory_size_in_bytes',
-        'observation.stats.search.groups.*query_time_in_millis',
-    ]
-    benchmarks = group_observations(data)
+    benchmarks = group_observations(data=data, fields=fields)
 
     for b in benchmarks:
         keys = [".".join(t[0].split(".")[-2:]) for t in b[0]]
