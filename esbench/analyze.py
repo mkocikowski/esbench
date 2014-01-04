@@ -4,12 +4,16 @@
 
 """Code for retrieving, analyzing, and displaying recorded benchmark data. """
 
+from __future__ import print_function
+
 import itertools
 import logging
 import json
 import collections
 import re
 import types
+import sys
+import csv
 
 import tabulate
 
@@ -183,9 +187,6 @@ def flatten_container(container=None):
     flat = list()
     _flatten()
 
-#     for f in flat:
-#         print(f[0])
-
     return flat
 
 
@@ -228,15 +229,38 @@ FIELDS = (
 
 )
 
-def show_benchmarks(conn=None, benchmark_ids=None, fields=None):
+
+def output_benchmark(fh=None, fmt=None, observations=None):
+
+    keys = [t[0] for t in observations[0]]
+#     keys = [".".join(t[0].split(".")[-2:]) for t in observations[0]]
+    values = [[t[1] for t in o] for o in observations]
+
+    if fmt == 'tab':
+        # shorten the keys a bit
+        def _shorten(s):
+            s = "".join([c for c in s if c not in "aeiou"])
+            return s
+        keys = [".".join(k.split(".")[-2:]) for k in keys]
+#         keys = [_shorten(k) for k in keys]
+        print(tabulate.tabulate(values, headers=keys), file=fh)
+
+    elif fmt == 'csv':
+        writer = csv.writer(fh)
+        writer.writerow(keys)
+        writer.writerows(values)
+
+    else:
+        raise ValueError("unknown output format: %s" % fmt)
+
+
+def show_benchmarks(conn=None, benchmark_ids=None, fields=None, fmt=None, fh=None):
 
     data = list(get_data(conn=conn, benchmark_ids=benchmark_ids))
     benchmarks = group_observations(data=data, fields=fields)
 
     for b in benchmarks:
-        keys = [".".join(t[0].split(".")[-2:]) for t in b[0]]
-        values = [[t[1] for t in f] for f in b]
-        print(tabulate.tabulate(values, headers=keys))
+        output_benchmark(fh=fh, fmt=fmt, observations=b)
 
 
 

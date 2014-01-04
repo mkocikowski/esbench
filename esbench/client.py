@@ -20,13 +20,20 @@ logger = logging.getLogger(__name__)
 
 def args_parser():
 
-    epilog = ""
+    epilog = """
+To get help for a command, do 'esbench command -h'
+Other commands:
+curl -XDELETE http://localhost:9200/esbench_stats # delete existing benchmarks
+"""
 
-    parser = argparse.ArgumentParser(description="Elasticsearch benchmark runner (%s)" % (esbench.__version__, ), epilog=epilog)
+    parser = argparse.ArgumentParser(description="Elasticsearch benchmark runner (%s)" % (esbench.__version__, ), epilog=epilog, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('-v', '--version', action='version', version=esbench.__version__)
     subparsers = parser.add_subparsers(dest='command', title='commands')
 
-    parser_run = subparsers.add_parser('run', help='run a benchmark')
+    epilog_run = """
+"""
+
+    parser_run = subparsers.add_parser('run', help='run a benchmark', epilog=epilog_run, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser_run.add_argument('-v', '--verbose', action='store_true')
     parser_run.add_argument('--observations', metavar='N', type=int, default=10, help='run n observations; (%(default)i)')
     parser_run.add_argument('--segments', type=int, metavar='N', default=None, help='max_num_segments for optimize calls; (%(default)s)')
@@ -40,19 +47,35 @@ def args_parser():
     parser_run.add_argument('--data', metavar='PATH', type=str, action='store', default=None, help="read data from PATH; set to /dev/stdin to read from stdin. Set this only if you want to provide your own data, by default US Patent Application data will be used; (%(default)s)")
     parser_run.add_argument('maxsize', nargs="?", type=str, default='1mb', help="max size of the index, as either the number of documents or byte size. To index 100 documents, set it to 100; to index 1gb of documents, set it to 1gb. When setting the byte size of data, best effort will be made to run observations at even intervals, and the index bytesize will be ballpark, not the exact figure you specified. The default USPTO Patent Application data set has 123GB of data / 2.5m documents, so if you want more, you'll need to look elsewhere (or feed the same data in more than once); (%(default)s)")
 
-    parser_show = subparsers.add_parser('show', help='show data from recorded benchmarks')
-    parser_show.add_argument('-v', '--verbose', action='store_true')
-    parser_show.add_argument('--sample', metavar='N', type=int, default=1, help='sample every Nth observation; (%(default)i)')
-    parser_show.add_argument('--format', choices=['tab', 'json', 'csv'], default='tab', help='(%(default)s)')
-    parser_show.add_argument('ids', nargs='*')
+    epilog_show = """
+Sample use:
+# output tabulated, all benchmarks, default fields, to stdout:
+esbench show
+# write csv-formatted data for benchmark bd97da35 to file foo.csv:
+esbench show --format csv bd97da35 > foo.csv
+# see fieldnames for default setting of '--fields':
+esbench show --format csv | head -1 | tr , '\\n'
+# see all possible fieldnames:
+esbench show --format csv --fields '.*' | head -1 | tr , '\\n'
+# plot data in gnuplot and open resulting graph in google chrome (on osx):
+esbench show --format csv | tr , '\\t' > /tmp/esbench.csv && gnuplot -e "set terminal svg size 1000, 1000; plot for [col=8:10] '/tmp/esbench.csv' using 6:col with lines title columnheader, '' using 6:5 with lines title columnheader" > /tmp/esbench.svg && open -a 'Google Chrome' '/tmp/esbench.svg'
+ """
 
-    parser_clear = subparsers.add_parser('clear', help='clear recorded benchmarks')
-    parser_clear.add_argument('-v', '--verbose', action='store_true')
-    parser_clear.add_argument('ids', nargs='*')
+    parser_show = subparsers.add_parser('show', help='show data from recorded benchmarks', epilog=epilog_show, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser_show.add_argument('-v', '--verbose', action='store_true')
+#     parser_show.add_argument('--sample', metavar='N', type=int, default=1, help='sample every Nth observation; (%(default)i)')
+    parser_show.add_argument('--format', choices=['tab', 'csv'], default='tab', help="output format; (%(default)s)")
+    parser_show.add_argument('--fields', metavar='REGEX', type=str, action='store', default=esbench.analyze.FIELDS, help='default: %(default)s')
+    parser_show.add_argument('--trunc', action='store_true')
+    parser_show.add_argument('ids', nargs='*', help='benchmark ids; (default: show all benchmarks)')
+
+#     parser_clear = subparsers.add_parser('clear', help='clear recorded benchmarks')
+#     parser_clear.add_argument('-v', '--verbose', action='store_true')
+#     parser_clear.add_argument('ids', nargs='*')
 
     parser_dump = subparsers.add_parser('dump', help='curl dump recorded benchmarks')
     parser_dump.add_argument('-v', '--verbose', action='store_true')
-    parser_dump.add_argument('ids', nargs='*')
+    parser_dump.add_argument('ids', nargs='*', help='benchmark ids; (default: show all benchmarks)')
 
     return parser
 
@@ -100,13 +123,16 @@ def main():
 
         elif args.command == 'show':
 #             esbench.analyze.show_benchmarks(conn, benchmark_ids=args.ids, sample=args.sample, fmt=args.format)
-            esbench.analyze.show_benchmarks(conn=conn, benchmark_ids=args.ids, fields=esbench.analyze.FIELDS)
+            try:
+                esbench.analyze.show_benchmarks(conn=conn, benchmark_ids=args.ids, fields=args.fields, fmt=args.format, fh=sys.stdout)
+            except IOError as exc:
+                logger.debug(exc)
 
         elif args.command == 'dump':
             esbench.analyze.dump_benchmarks(conn, args.ids)
 
-        elif args.command == 'clear':
-            esbench.analyze.delete_benchmarks(conn, args.ids)
+#         elif args.command == 'clear':
+#             esbench.analyze.delete_benchmarks(conn, args.ids)
 
 
 if __name__ == "__main__":
