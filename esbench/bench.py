@@ -162,6 +162,9 @@ class Observation(object):
             stats['search']['groups'][query.name]['client_total'] = query.execution_count
             stats['search']['groups'][query.name]['client_time'] = "%.2fs" % (query.t_client, ) if query.t_client else None
             stats['search']['groups'][query.name]['client_time_in_millis'] = int(query.t_client * 1000.0) if query.t_client else None
+            stats['search']['groups'][query.name]['client_time_in_millis_per_query'] = float(stats['search']['groups'][query.name]['client_time_in_millis']) / query.execution_count if query.execution_count else None
+            stats['search']['groups'][query.name]['fetch_time_in_millis_per_query'] = float(stats['search']['groups'][query.name]['fetch_time_in_millis']) / query.execution_count if query.execution_count else None
+            stats['search']['groups'][query.name]['query_time_in_millis_per_query'] = float(stats['search']['groups'][query.name]['query_time_in_millis']) / query.execution_count if query.execution_count else None
 
         return stats
 
