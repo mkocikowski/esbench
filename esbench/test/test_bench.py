@@ -137,6 +137,7 @@ class ObservationTest(unittest.TestCase):
         self.observation._segments = lambda: {}
         resp = self.observation.record()
         data = json.loads(resp.data)
+        self.assertEqual(set(['cluster', 'segments', 'meta', 'stats']), set(data.keys()))
         self.assertEqual(data['meta']['benchmark_id'], self.observation.benchmark_id)
 
 
@@ -236,7 +237,8 @@ class BenchmarkTest(unittest.TestCase):
         self.bench._get_cluster_info = lambda: {'foo': 'bar'}
         resp = self.bench.record()
         data = json.loads(resp.data)
-        self.assertEqual(data['argv']['maxsize'], '1mb')
+        self.assertEqual(set(['meta', 'cluster']), set(data.keys()))
+        self.assertEqual(data['meta']['argv']['maxsize'], '1mb')
         self.assertEqual(data['cluster']['foo'], 'bar')
         # TODO: more tests?
 

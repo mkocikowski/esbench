@@ -101,6 +101,7 @@ class Observation(object):
 
         self.ts_start = None
         self.ts_stop = None
+        self.t1 = time.time()
         self.t_optimize = None
 
 
@@ -197,7 +198,8 @@ class Observation(object):
 
 
     def record(self):
-
+    
+        self.t_total = time.time() - self.t1
         obs = {
             'meta': {
                 'benchmark_id': self.benchmark_id,
@@ -205,6 +207,8 @@ class Observation(object):
                 'observation_sequence_no': self.observation_sequence_no,
                 'observation_start': self.ts_start,
                 'observation_stop': self.ts_stop,
+                't_total': "%.2fm" % (self.t_total / 60.0),
+                't_total_in_millis': int(self.t_total * 1000),
             },
             'segments': self._segments(),
             'stats': self._stats(),
@@ -225,6 +229,7 @@ class Benchmark(object):
     def __init__(self, cmnd=None, argv=None, conn=None, stats_index_name=None):
 
         self.benchmark_id = uuid()
+        # TODO: cmnd doesn't seem to do anything, see if can get rid of it
         self.cmnd = cmnd
         self.argv = argv
         self.conn = conn
@@ -331,20 +336,23 @@ class Benchmark(object):
         self.t_total = time.time() - self.t1
 
         stat = {
-            'benchmark_id': self.benchmark_id,
-            'benchmark_name': self.argv.name,
-            'benchmark_start': self.ts_start,
-            'benchmark_stop': self.ts_stop,
-            't_total': "%.2fm" % (self.t_total / 60.0),
-            't_total_in_millis': int(self.t_total * 1000),
-            'argv': self.argv.__dict__,
-            'cmnd': self.cmnd,
-#             'config': json.dumps(self.config, sort_keys=True),
-            'config': self.config,
+            'meta': {
+                'benchmark_id': self.benchmark_id,
+                'benchmark_name': self.argv.name,
+                'benchmark_start': self.ts_start,
+                'benchmark_stop': self.ts_stop,
+                't_total': "%.2fm" % (self.t_total / 60.0),
+                't_total_in_millis': int(self.t_total * 1000),
+                'argv': self.argv.__dict__,
+    #             'cmnd': self.cmnd,
+                'config': json.dumps(self.config, sort_keys=True),
+    #             'config': self.config,
+            }, 
+            
             'cluster': self._get_cluster_info(),
         }
-        stat['config']['queries'] = json.dumps(stat['config']['queries'])
-        stat['config']['index'] = json.dumps(stat['config']['index'])
+#         stat['config']['queries'] = json.dumps(stat['config']['queries'])
+#         stat['config']['index'] = json.dumps(stat['config']['index'])
 
         data = json.dumps(stat, sort_keys=True)
         path = '%s/bench/%s' % (self.stats_index_name, self,)

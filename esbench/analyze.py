@@ -86,8 +86,8 @@ def get_data(conn=None, benchmark_ids=None):
                 "benchmark": benchmark['_source'],
                 "observation": observation['_source'],
             }
-            data[u'benchmark'][u'_id'] = benchmark['_id']
-            data[u'observation'][u'_id'] = observation['_id']
+#             data[u'benchmark'][u'_id'] = benchmark['_id']
+#             data[u'observation'][u'_id'] = observation['_id']
             yield data
 
 
@@ -199,7 +199,7 @@ def group_observations(data=None, fields=None):
     # filter out tuples in each observation according to pattern.
     data_filtered = [filter_tuples(tuples=t, pattern=fields) for t in data_flattened]
 
-    # sort observations based on their benchmark_id and obsewrvation_sequence_no
+    # sort observations based on their benchmark_id and observation_sequence_no
     def sort_f(d):
         _d = dict(d)
         return (_d['observation.meta.benchmark_id'], _d['observation.meta.observation_sequence_no'])
@@ -209,7 +209,7 @@ def group_observations(data=None, fields=None):
     # list of observations, where each observation is [see comments above]
     groups = [list(benchmark_obs) for benchmark_id, benchmark_obs in itertools.groupby(data_sorted, lambda x: dict(x)['observation.meta.benchmark_id'])]
     # sort benchmark groups on timestamp benchmark started
-    groups_sorted = sorted(groups, key=lambda x: dict(x[0])['benchmark.benchmark_start'])
+    groups_sorted = sorted(groups, key=lambda x: dict(x[0])['benchmark.meta.benchmark_start'])
 
     return groups_sorted
 
@@ -217,7 +217,7 @@ def group_observations(data=None, fields=None):
 FIELDS = (
     "(?!observation.segments.segments)"
         "("
-            "(benchmark.benchmark_start)|"
+            "(benchmark.meta.benchmark_start)|"
             "(observation.meta.benchmark_id)|"
             "(observation.meta.observation_id)|"
             "(observation.meta.observation_sequence_no)|"
