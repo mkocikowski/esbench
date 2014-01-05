@@ -64,9 +64,8 @@ esbench show --format csv | tr , '\\t' > /tmp/esbench.csv && gnuplot -e "set ter
     parser_show = subparsers.add_parser('show', help='show data from recorded benchmarks', epilog=epilog_show, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser_show.add_argument('-v', '--verbose', action='store_true')
 #     parser_show.add_argument('--sample', metavar='N', type=int, default=1, help='sample every Nth observation; (%(default)i)')
-    parser_show.add_argument('--format', choices=['tab', 'csv'], default='tab', help="output format; (%(default)s)")
+    parser_show.add_argument('--format', choices=['csv', 'tab'], default='csv', help="output format; (%(default)s)")
     parser_show.add_argument('--fields', metavar='REGEX', type=str, action='store', default=esbench.analyze.FIELDS, help='default: %(default)s')
-    parser_show.add_argument('--trunc', action='store_true')
     parser_show.add_argument('ids', nargs='*', help='benchmark ids; (default: show all benchmarks)')
 
 #     parser_clear = subparsers.add_parser('clear', help='clear recorded benchmarks')
