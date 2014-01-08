@@ -223,8 +223,10 @@ FIELDS = (
             "(observation.meta.observation_sequence_no)|"
             "(observation.segments.num_committed_segments)|"
             "(observation.stats.docs.count)|"
+            "(observation.stats.store.size_in_bytes)|"
             "(observation.stats.fielddata.memory_size_in_bytes)|"
-            "(observation.stats.search.groups.*query_time_in_millis$)" 
+#             "(observation.stats.search.groups.*query_time_in_millis$)"
+            "(observation.stats.search.groups.*query_time_in_millis_per_query$)"
         ")"
 
 )
