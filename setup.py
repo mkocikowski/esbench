@@ -37,7 +37,7 @@ github page.
 
 setup(
     name = 'esbench',
-    version = '0.1.0',
+    version = '0.1.1',
     author = 'Mik Kocikowski',
     author_email = 'mkocikowski@gmail.com',
     url = 'https://github.com/mkocikowski/esbench',
@@ -51,7 +51,8 @@ setup(
     },
     entry_points = {
         'console_scripts': [
-            'esbench = esbench.client:main',
+            'esbench = esbench.client:main', 
+#             'elasticsearch_bench = esbench.client:main',
         ]
     },
     classifiers = [
