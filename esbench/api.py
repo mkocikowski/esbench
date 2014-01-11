@@ -11,6 +11,7 @@ import contextlib
 import logging
 import json
 import collections
+import re
 
 logger = logging.getLogger(__name__)
 
@@ -42,6 +43,11 @@ def retry_and_reconnect_on_IOError(method):
     return wrapper
 
 
+def _massage_request_path(path):
+    if not path:
+        return "/"
+    return "/%s" % re.search(r"^/*(.*)$", path).group(1)
+
 class Conn(object):
 
     def __init__(self, host='localhost', port=9200, timeout=DEFAULT_TIMEOUT, conn_cls=httplib.HTTPConnection):
@@ -60,14 +66,16 @@ class Conn(object):
         if self.conn: self.conn.close()
         self.conn = None
 
+
     @retry_and_reconnect_on_IOError
     def get(self, path, data=None):
+        path = _massage_request_path(path)
         method = 'GET'
         if data:
-            curl = "curl -X%s http://%s:%i/%s -d '%s'" % (method, self.host, self.port, path, data)
+            curl = "curl -X%s http://%s:%i%s -d '%s'" % (method, self.host, self.port, path, data)
             head = {'Content-type': 'application/json'}
         else:
-            curl = "curl -X%s http://%s:%i/%s" % (method, self.host, self.port, path)
+            curl = "curl -X%s http://%s:%i%s" % (method, self.host, self.port, path)
             head = {}
         self.conn.request(method, path, data, head)
         resp = self.conn.getresponse()
@@ -80,8 +88,9 @@ class Conn(object):
     def put(self, path, data):
         if not data:
             raise ValueError('data must not evaluate to false')
+        path = _massage_request_path(path)
         method = 'PUT'
-        curl = "curl -X%s http://%s:%i/%s -d '%s'" % (method, self.host, self.port, path, data)
+        curl = "curl -X%s http://%s:%i%s -d '%s'" % (method, self.host, self.port, path, data)
         head = {'Content-type': 'application/json'}
         self.conn.request(method, path, data, head)
         resp = self.conn.getresponse()
@@ -94,12 +103,13 @@ class Conn(object):
 
     @retry_and_reconnect_on_IOError
     def post(self, path, data):
+        path = _massage_request_path(path)
         method = 'POST'
         if data:
-            curl = "curl -X%s http://%s:%i/%s -d '%s'" % (method, self.host, self.port, path, data)
+            curl = "curl -X%s http://%s:%i%s -d '%s'" % (method, self.host, self.port, path, data)
             head = {'Content-type': 'application/json'}
         else:
-            curl = "curl -X%s http://%s:%i/%s" % (method, self.host, self.port, path)
+            curl = "curl -X%s http://%s:%i%s" % (method, self.host, self.port, path)
             head = {}
         self.conn.request(method, path, data, head)
         resp = self.conn.getresponse()
@@ -112,8 +122,9 @@ class Conn(object):
 
     @retry_and_reconnect_on_IOError
     def delete(self, path):
+        path = _massage_request_path(path)
         method = 'DELETE'
-        curl = "curl -X%s http://%s:%i/%s" % (method, self.host, self.port, path)
+        curl = "curl -X%s http://%s:%i%s" % (method, self.host, self.port, path)
         self.conn.request(method, path)
         resp = self.conn.getresponse()
         data = resp.read()

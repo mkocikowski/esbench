@@ -84,7 +84,7 @@ class ApiConnTest(unittest.TestCase):
         self.assertEqual(resp.status, 404)
         self.assertEqual(resp.reason, 'not found')
         resp = c.delete("foo/bar")
-        self.assertEqual(c.conn.requests, [('GET', 'foo/bar', None), ('GET', 'foo/bar', '{"status": 404, "reason": "not found"}'), ('DELETE', 'foo/bar', None)])
+        self.assertEqual(c.conn.requests, [('GET', '/foo/bar', None), ('GET', '/foo/bar', '{"status": 404, "reason": "not found"}'), ('DELETE', '/foo/bar', None)])
         self.assertEqual([r.status for r in c.conn.responses], [200, 404, 200])
 
     def test_conn_get(self):
@@ -116,7 +116,11 @@ class ApiConnTest(unittest.TestCase):
         resp = c.delete("foo/bar")
         self.assertEqual(resp.curl, "curl -XDELETE http://localhost:9200/foo/bar")
 
-
+    def test_massage_request_path(self):
+        self.assertEqual("/", esbench.api._massage_request_path(None))        
+        self.assertEqual("/foo", esbench.api._massage_request_path("foo"))
+        self.assertEqual("/foo", esbench.api._massage_request_path("//foo"))
+        self.assertEqual("/foo?bar", esbench.api._massage_request_path("foo?bar"))
 
 class ApiFuncTest(unittest.TestCase):
 
