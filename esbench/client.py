@@ -35,6 +35,8 @@ curl -XDELETE http://localhost:9200/esbench_stats # delete existing benchmarks
 
     parser_run = subparsers.add_parser('run', help='run a benchmark', epilog=epilog_run, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser_run.add_argument('-v', '--verbose', action='store_true')
+    parser_run.add_argument('--host', type=str, default='localhost', help='elasticsearch host; (%(default)s)')
+    parser_run.add_argument('--port', type=int, default=9200, help='elasticsearch port; (%(default)s)')
     parser_run.add_argument('--observations', metavar='N', type=int, default=10, help='run n observations; (%(default)i)')
     parser_run.add_argument('--segments', type=int, metavar='N', default=None, help='max_num_segments for optimize calls; (%(default)s)')
     parser_run.add_argument('--repetitions', metavar='N', type=int, default=100, help='run each query n times per observation; (%(default)i)')
@@ -63,6 +65,8 @@ esbench show --format csv | tr , '\\t' > /tmp/esbench.csv && gnuplot -e "set ter
     parser_show = subparsers.add_parser('show', help='show data from recorded benchmarks', epilog=epilog_show, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser_show.add_argument('-v', '--verbose', action='store_true')
 #     parser_show.add_argument('--sample', metavar='N', type=int, default=1, help='sample every Nth observation; (%(default)i)')
+    parser_show.add_argument('--host', type=str, default='localhost', help='elasticsearch host; (%(default)s)')
+    parser_show.add_argument('--port', type=int, default=9200, help='elasticsearch port; (%(default)s)')
     parser_show.add_argument('--format', choices=['csv', 'tab'], default='csv', help="output format; (%(default)s)")
     parser_show.add_argument('--fields', metavar='REGEX', type=str, action='store', default=esbench.analyze.FIELDS, help='default: %(default)s')
     parser_show.add_argument('ids', nargs='*', help='benchmark ids; (default: show all benchmarks)')
@@ -73,6 +77,8 @@ esbench show --format csv | tr , '\\t' > /tmp/esbench.csv && gnuplot -e "set ter
 
     parser_dump = subparsers.add_parser('dump', help='curl dump recorded benchmarks')
     parser_dump.add_argument('-v', '--verbose', action='store_true')
+    parser_dump.add_argument('--host', type=str, default='localhost', help='elasticsearch host; (%(default)s)')
+    parser_dump.add_argument('--port', type=int, default=9200, help='elasticsearch port; (%(default)s)')
     parser_dump.add_argument('ids', nargs='*', help='benchmark ids; (default: show all benchmarks)')
 
     return parser
@@ -103,34 +109,32 @@ def main():
     else:
         logging.basicConfig(level=logging.INFO)
 
-    with esbench.api.connect() as conn:
+    with esbench.api.connect(host=args.host, port=args.port) as conn:
 
-        if args.command == 'run':
-            benchmark = esbench.bench.Benchmark(cmnd=cmnd, argv=args, conn=conn, stats_index_name=esbench.STATS_INDEX_NAME)
-            benchmark.prepare()
-            if args.no_load:
-                for _ in range(args.observations):
-                    benchmark.observe()
-            else:
-                max_n, max_byte_size = parse_maxsize(args.maxsize)
-                with esbench.data.feed(path=args.data) as feed:
-                    batches = esbench.data.batches_iterator(lines=feed, batch_count=args.observations, max_n=max_n, max_byte_size=max_byte_size)
-                    benchmark.run(batches)
+        try: 
 
-            benchmark.record()
+            if args.command == 'run':
+                benchmark = esbench.bench.Benchmark(cmnd=cmnd, argv=args, conn=conn, stats_index_name=esbench.STATS_INDEX_NAME)
+                benchmark.prepare()
+                if args.no_load:
+                    for _ in range(args.observations):
+                        benchmark.observe()
+                else:
+                    max_n, max_byte_size = parse_maxsize(args.maxsize)
+                    with esbench.data.feed(path=args.data) as feed:
+                        batches = esbench.data.batches_iterator(lines=feed, batch_count=args.observations, max_n=max_n, max_byte_size=max_byte_size)
+                        benchmark.run(batches)
 
-        elif args.command == 'show':
-#             esbench.analyze.show_benchmarks(conn, benchmark_ids=args.ids, sample=args.sample, fmt=args.format)
-            try:
+                benchmark.record()
+
+            elif args.command == 'show':
                 esbench.analyze.show_benchmarks(conn=conn, benchmark_ids=args.ids, fields=args.fields, fmt=args.format, fh=sys.stdout)
-            except IOError as exc:
-                logger.debug(exc)
 
-        elif args.command == 'dump':
-            esbench.analyze.dump_benchmarks(conn, args.ids)
+            elif args.command == 'dump':
+                esbench.analyze.dump_benchmarks(conn, args.ids)
 
-#         elif args.command == 'clear':
-#             esbench.analyze.delete_benchmarks(conn, args.ids)
+        except Exception as exc: 
+            logger.error(exc)
 
 
 if __name__ == "__main__":

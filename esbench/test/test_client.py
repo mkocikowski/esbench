@@ -34,6 +34,8 @@ class ClientTest(unittest.TestCase):
                 'data': None,
                 'append': False,
                 'config_file_path': os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "../", "config.json")),
+                'host': 'localhost', 
+                'port': 9200, 
             }
         )
 

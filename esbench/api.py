@@ -2,6 +2,10 @@
 # (c)2013 Mik Kocikowski, MIT License (http://opensource.org/licenses/MIT)
 # https://github.com/mkocikowski/esbench
 
+"""Use esbench.api.connect() to get a context manager for use with api calls.
+"""
+
+
 import httplib
 import contextlib
 import logging
@@ -48,12 +52,12 @@ class Conn(object):
         self.conn = None
 
     def connect(self, timeout=DEFAULT_TIMEOUT):
-#         self.conn = httplib.HTTPConnection(host=self.host, port=self.port, timeout=timeout)
+        """Use context manager from api.connect() instead."""
         self.conn = self.conn_cls(host=self.host, port=self.port, timeout=timeout)
         self.conn.connect()
 
     def close(self):
-        self.conn.close()
+        if self.conn: self.conn.close()
         self.conn = None
 
     @retry_and_reconnect_on_IOError
