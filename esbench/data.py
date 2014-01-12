@@ -90,6 +90,7 @@ def get_data(nocache=False, urls_f=urls):
         if not fn:
             # download() will return None if data can't be downloaded, in that
             # case just go to the next url
+            logger.debug("failed to download '%s', moving on", url)
             continue
         try:
             for line in unzip(fn):

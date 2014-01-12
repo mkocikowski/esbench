@@ -98,7 +98,7 @@ class Conn(object):
         if resp.status not in [200, 201]:
             logger.debug((resp.status, path, curl[:50]))
         if resp.status >= 400:
-            logger.warning((resp.status, path))
+            logger.warning((resp.status, path, data))
         return ApiResponse(resp.status, resp.reason, data, curl)
 
     @retry_and_reconnect_on_IOError
@@ -117,7 +117,7 @@ class Conn(object):
         if resp.status not in [200, 201]:
             logger.debug((resp.status, path, curl[:50]))
         if resp.status >= 400:
-            logger.warning((resp.status, path))
+            logger.warning((resp.status, path, data))
         return ApiResponse(resp.status, resp.reason, data, curl)
 
     @retry_and_reconnect_on_IOError
