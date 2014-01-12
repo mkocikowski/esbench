@@ -54,14 +54,13 @@ Sample use:
 # output tabulated, all benchmarks, default fields, to stdout:
 esbench show
 # write csv-formatted data for benchmark bd97da35 to file foo.csv:
-esbench show --format csv bd97da35 > foo.csv
+esbench show bd97da35 > foo.csv
 # see fieldnames for default setting of '--fields':
-esbench show --format csv | head -1 | tr , '\\n'
+esbench show | head -1 | tr , '\\n'
 # see all possible fieldnames:
-esbench show --format csv --fields '.*' | head -1 | tr , '\\n'
+esbench show --fields '.*' | head -1 | tr , '\\n'
 # plot data in gnuplot and open resulting graph in google chrome (on osx):
-esbench show --format csv | tr , '\\t' > /tmp/esbench.csv && gnuplot -e "set terminal svg size 1000, 1000; set xlabel 'dataset (GB)'; plot for [col=8:10] '/tmp/esbench.csv' using (column(11)/(2**30)):col with lines lw 3 title columnheader, '' using (column(11)/(2**30)):5 with fsteps title columnheader, '' using (column(11)/(2**30)):(column(7)/(2**20)) with fsteps title 'observation.stats.fielddata.memory_size_in_bytes (MB)'" > /tmp/esbench.svg && open -a 'Google Chrome' '/tmp/esbench.svg' """
-
+esbench show | tr , '\\t' > /tmp/esbench.csv && gnuplot -e "set terminal svg size 1000, 1000; set xlabel 'dataset (GB)'; plot for [col=8:10] '/tmp/esbench.csv' using 4:col with lines lw 3 title columnheader, '' using 4:5 with fsteps title columnheader, '' using 4:(column(7)/(2**20)) with fsteps title 'observation.stats.fielddata.memory_size_in_bytes (MB)', '' using 4:(column(11)/(2**30)) with fsteps title 'observation.stats.store.size_in_bytes (GB)'" > /tmp/esbench.svg && open -a 'Google Chrome' '/tmp/esbench.svg' """
     parser_show = subparsers.add_parser('show', help='show data from recorded benchmarks', epilog=epilog_show, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser_show.add_argument('-v', '--verbose', action='store_true')
 #     parser_show.add_argument('--sample', metavar='N', type=int, default=1, help='sample every Nth observation; (%(default)i)')
