@@ -59,8 +59,14 @@ esbench show bd97da35 > foo.csv
 esbench show | head -1 | tr , '\\n'
 # see all possible fieldnames:
 esbench show --fields '.*' | head -1 | tr , '\\n'
-# plot data in gnuplot and open resulting graph in google chrome (on osx):
-esbench show | tr , '\\t' > /tmp/esbench.csv && gnuplot -e "set terminal svg size 1000, 1000; set xlabel 'dataset (GB)'; plot for [col=8:10] '/tmp/esbench.csv' using 4:col with lines lw 3 title columnheader, '' using 4:5 with fsteps title columnheader, '' using 4:(column(7)/(2**20)) with fsteps title 'observation.stats.fielddata.memory_size_in_bytes (MB)', '' using 4:(column(11)/(2**30)) with fsteps title 'observation.stats.store.size_in_bytes (GB)'" > /tmp/esbench.svg && open -a 'Google Chrome' '/tmp/esbench.svg' """
+# plot optimize time vs data size in gnuplot and open resulting graph in google chrome (on osx):
+esbench show | tr , '\\t' > /tmp/esbench.csv && gnuplot -e "set terminal svg size 1000, 1000; set xlabel 'observation number'; plot '/tmp/esbench.csv' using 4:5 with fsteps title columnheader, '' using 4:(column(6)/(1000)) with fsteps title 'observation.segments.t_optimize_in_millis (SECONDS)'" > /tmp/esbench.svg && open -a 'Google Chrome' '/tmp/esbench.svg'
+# plot basic data in gnuplot and open resulting graph in google chrome (on osx):
+esbench show | tr , '\\t' > /tmp/esbench.csv && gnuplot -e "set terminal svg size 1000, 1000; set xlabel 'observation number'; plot for [col=9:11] '/tmp/esbench.csv' using 4:col with lines lw 3 title columnheader, '' using 4:5 with fsteps title columnheader, '' using 4:(column(8)/(2**20)) with fsteps title 'observation.stats.fielddata.memory_size_in_bytes (MB)', '' using 4:(column(12)/(2**30)) with fsteps title 'observation.stats.store.size_in_bytes (GB)'" > /tmp/esbench.svg && open -a 'Google Chrome' '/tmp/esbench.svg'
+
+"""
+
+
     parser_show = subparsers.add_parser('show', help='show data from recorded benchmarks', epilog=epilog_show, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser_show.add_argument('-v', '--verbose', action='store_true')
 #     parser_show.add_argument('--sample', metavar='N', type=int, default=1, help='sample every Nth observation; (%(default)i)')
@@ -104,13 +110,13 @@ def main():
     cmnd = " ".join(sys.argv[1:])
 
     if args.verbose:
-        logging.basicConfig(level=logging.DEBUG, format='%(asctime)s %(process)d %(name)s %(funcName)s:%(lineno)d %(levelname)s %(message)s')
+        logging.basicConfig(level=logging.DEBUG, format='%(asctime)s %(process)d %(name)s.%(funcName)s:%(lineno)d %(levelname)s %(message)s')
     else:
         logging.basicConfig(level=logging.INFO)
 
     with esbench.api.connect(host=args.host, port=args.port) as conn:
 
-        try: 
+        try:
 
             if args.command == 'run':
                 benchmark = esbench.bench.Benchmark(cmnd=cmnd, argv=args, conn=conn, stats_index_name=esbench.STATS_INDEX_NAME)
@@ -132,7 +138,7 @@ def main():
             elif args.command == 'dump':
                 esbench.analyze.dump_benchmarks(conn, args.ids)
 
-        except Exception as exc: 
+        except Exception as exc:
             logger.error(exc)
 
 

@@ -202,7 +202,7 @@ class Observation(object):
 
 
     def record(self):
-    
+
         self.t_total = time.time() - self.t1
         obs = {
             'meta': {
@@ -293,6 +293,7 @@ class Benchmark(object):
 
         count = 0
         size_b = 0
+        logger.debug("begining data load...")
         for line in lines:
             size_b += len(line)
             resp = esbench.api.document_post(self.conn, self.doc_index_name, self.doctype, line)
@@ -354,8 +355,8 @@ class Benchmark(object):
     #             'cmnd': self.cmnd,
                 'config': json.dumps(self.config, sort_keys=True),
     #             'config': self.config,
-            }, 
-            
+            },
+
             'cluster': self._get_cluster_info(),
         }
 #         stat['config']['queries'] = json.dumps(stat['config']['queries'])
