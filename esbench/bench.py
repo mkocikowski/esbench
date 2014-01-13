@@ -272,6 +272,7 @@ class Benchmark(object):
 
         if not self.argv.no_optimize_calls:
             t1 = time.time()
+            logger.info("starting optimize call...")
             resp = esbench.api.index_optimize(self.conn, self.doc_index_name, self.argv.segments)
             observation.t_optimize = time.time() - t1
             logger.info("optimize call: %.2fs", observation.t_optimize)
