@@ -17,6 +17,7 @@ import itertools
 import string
 import contextlib
 import collections
+import time
 
 import esbench
 import esbench.api
@@ -46,6 +47,7 @@ def download(url, tmpd="/tmp", timeout=1):
     fn = os.path.abspath(os.path.join(tmpd, fn))
 
     logger.info("downloading '%s' to '%s'...", url, fn)
+    t1 = time.time()
 
     # if the file already exists, don't download it again
     if os.path.exists(fn):
@@ -62,7 +64,7 @@ def download(url, tmpd="/tmp", timeout=1):
     
             path = "/".join(url.split("/")[3:])
             resp = conn.get(path)
-            logger.info("done downloading %s", url)
+            logger.info("done downloading %s, time: %.2fs", url, time.time()-t1)
     
         if resp.status != 200: 
             raise IOError("resonse code %i, reason: %s" % (resp.status, resp.reason))
