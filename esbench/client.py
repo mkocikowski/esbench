@@ -139,7 +139,7 @@ def main():
                 esbench.analyze.dump_benchmarks(conn, args.ids)
 
         except Exception as exc:
-            logger.error(exc)
+            logger.error(exc, exc_info=True)
 
 
 if __name__ == "__main__":
