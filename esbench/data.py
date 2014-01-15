@@ -9,7 +9,9 @@ import os.path
 import logging
 import argparse
 import sys
-import urllib2
+# import urllib2
+import httplib
+# import urlparse
 import gzip
 import itertools
 import string
@@ -17,6 +19,7 @@ import contextlib
 import collections
 
 import esbench
+import esbench.api
 
 logger = logging.getLogger(__name__)
 
@@ -37,35 +40,74 @@ def urls(url_template=None, count=75):
             yield (url_template % (year, postfix))
 
 
-def download(url, tmpd="/tmp"):
+def download(url, tmpd="/tmp", timeout=1):
 
     fn = os.path.basename(url)
     fn = os.path.abspath(os.path.join(tmpd, fn))
 
-    logger.info("Downloading '%s' to '%s'", url, fn)
+    logger.info("downloading '%s' to '%s'...", url, fn)
 
     # if the file already exists, don't download it again
     if os.path.exists(fn):
-        logger.info("Using cached file '%s'", fn)
+        logger.info("using cached file '%s'", fn)
         return fn
 
-    try:
-        resp = urllib2.urlopen(url)
+    try: 
+
+        with esbench.api.connect(
+                host='s3-us-west-1.amazonaws.com', 
+                port=443, 
+                timeout=timeout, 
+                conn_cls=httplib.HTTPSConnection) as conn: 
+    
+            path = "/".join(url.split("/")[3:])
+            resp = conn.get(path)
+            logger.info("done downloading %s", url)
+    
+        if resp.status != 200: 
+            raise IOError("resonse code %i, reason: %s" % (resp.status, resp.reason))
+    
+        fn = os.path.basename(url)
+        fn = os.path.abspath(os.path.join(tmpd, fn))
         with open(fn, 'w') as f:
-            chunk = resp.read(2**16)
-            while chunk:
-                f.write(chunk)
-                chunk = resp.read(2**16)
-                sys.stderr.write(".")
-        logger.info("finished downloading '%s'", fn)
-        resp.close()
+            f.write(resp.data)
+    
+        return fn
+    
+    except (IOError,) as exc: 
+        logger.warning(exc, exc_info=True)
+        return None
 
-    except (IOError,) as exc:
-        logger.debug("error %s opening url: %s", exc, url)
-        fn = None
 
-    return fn
-
+# def download(url, tmpd="/tmp"):
+# 
+#     fn = os.path.basename(url)
+#     fn = os.path.abspath(os.path.join(tmpd, fn))
+# 
+#     logger.info("Downloading '%s' to '%s'", url, fn)
+# 
+#     # if the file already exists, don't download it again
+#     if os.path.exists(fn):
+#         logger.info("Using cached file '%s'", fn)
+#         return fn
+# 
+#     try:
+#         resp = urllib2.urlopen(url)
+#         with open(fn, 'w') as f:
+#             chunk = resp.read(2**16)
+#             while chunk:
+#                 f.write(chunk)
+#                 chunk = resp.read(2**16)
+#                 sys.stderr.write(".")
+#         logger.info("finished downloading '%s'", fn)
+#         resp.close()
+# 
+#     except (IOError,) as exc:
+#         logger.debug("error %s opening url: %s", exc, url)
+#         fn = None
+# 
+#     return fn
+# 
 
 
 def unzip(fn):
@@ -221,7 +263,7 @@ def args_parser():
 
 def main():
 
-    logging.basicConfig(level=logging.INFO)
+    logging.basicConfig(level=logging.DEBUG)
     args = args_parser().parse_args()
 
     try:
@@ -230,7 +272,7 @@ def main():
                 print(line)
 
     except IOError as exc:
-#         logger.warning(exc)
+        logger.warning(exc)
         pass
 
 

@@ -28,7 +28,7 @@ def retry_and_reconnect_on_IOError(method):
         for i in [1, 2, 5, 10, 25, 50, 75, 100]:
             try:
                 if not self.conn:
-#                     logger.debug("opening http conn: %s, %s", str(args), str(kwargs))
+                    logger.debug("opening %s with timeout: %.2fs...", self.conn_cls, self.timeout*i)
                     self.connect(timeout=self.timeout*i)
                 res = method(self, *args, **kwargs)
                 # connections with really long timeouts should not be kept
@@ -37,7 +37,7 @@ def retry_and_reconnect_on_IOError(method):
                     self.close()
                 return res
             except IOError as (exc):
-                logger.warning("%s (%s) in retry_and_reconnect_on_IOError (timeout: %is) try: %i, pause: %is", type(exc), exc, self.timeout, i, 1, exc_info=True)
+                logger.warning("%s (%s) in retry_and_reconnect_on_IOError (timeout: %.2fs) try: %i, pause: %is", type(exc), exc, self.timeout*i, i, 1, exc_info=False)
                 self.close()
         raise # re-raises the last exception, so most likely IOError
     return wrapper
