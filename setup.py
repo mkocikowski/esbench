@@ -37,7 +37,7 @@ github page.
 
 setup(
     name = 'esbench',
-    version = '0.1.2',
+    version = '0.2.0',
     author = 'Mik Kocikowski',
     author_email = 'mkocikowski@gmail.com',
     url = 'https://github.com/mkocikowski/esbench',
@@ -56,7 +56,7 @@ setup(
         ]
     },
     classifiers = [
-        "Development Status :: 3 - Alpha",
+        "Development Status :: 4 - Beta",
         "Environment :: Console",
         "Intended Audience :: Developers",
         "License :: OSI Approved :: MIT License",
