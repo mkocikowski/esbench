@@ -23,16 +23,6 @@ This should give you a reasonable stable and reasonably current version. There
 is always the 'master' (replace 'dev.zip' with 'master.zip' in the command
 above), but I really think for now you are best off with 'dev'. 
 
-
-Tests
------
-Once 'esbench' has been installed (no need for local Elasticsearch instance):
-
-	python -m esbench.test.units
-
-This may take few minutes as part of the test involves downloading a sample
-data file from s3. 
-
 Quick start
 -----------
 With an instance of elasticsearch running on localhost:9200, do: 
@@ -201,10 +191,6 @@ To load these into an elasticsearch index on localhost:
 
     . foo.curl
 
-The 'clear' command
--------------------
-Deletes specified benchmarks and related observations. 
-
 Data
 ----
 The default data set is US Patent Applications fror years 2005-2012. These
@@ -228,6 +214,15 @@ document counts / byte sizes are as follows:
 for a total of 123gb of raw data. These files are pre
 parsed and stored in S3 so that there is a solid baseline immutable data set
 which can be easily shared. 
+
+Tests
+-----
+Once 'esbench' has been installed (no need for local Elasticsearch instance):
+
+	python -m esbench.test.units
+
+This may take few minutes as part of the test involves downloading a sample
+data file from s3. 
 
 
 License
