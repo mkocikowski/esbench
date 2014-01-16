@@ -102,8 +102,8 @@ class Observation(object):
         self.ts_start = None
         self.ts_stop = None
         self.t1 = time.time()
-        self.t_optimize = None
-
+        self.t_optimize = 0
+        
 
     def run(self):
 
@@ -131,8 +131,8 @@ class Observation(object):
         segments = {
             "num_search_segments": _s['indices'][self.doc_index_name]['shards']['0'][0]['num_search_segments'],
             "num_committed_segments": _s['indices'][self.doc_index_name]['shards']['0'][0]['num_committed_segments'],
-            "t_optimize": "%.2fs" % (self.t_optimize, ) if self.t_optimize else None,
-            "t_optimize_in_millis": int(self.t_optimize * 1000) if self.t_optimize else None,
+            "t_optimize": "%.2fs" % (self.t_optimize, ),
+            "t_optimize_in_millis": int(self.t_optimize * 1000), 
             "segments": _s['indices'][self.doc_index_name]['shards']['0'][0]['segments'] if self.record_segment_stats else None,
         }
 

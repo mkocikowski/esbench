@@ -76,6 +76,7 @@ class ObservationTest(unittest.TestCase):
     def test_init(self):
         self.assertIsNone(self.observation.ts_start)
         self.assertIsNone(self.observation.ts_stop)
+        self.assertEqual(0, self.observation.t_optimize)
         self.assertIsInstance(self.observation.queries[1], esbench.bench.SearchQuery)
 
 
@@ -103,7 +104,7 @@ class ObservationTest(unittest.TestCase):
         self.assertEqual(sorted(['_a', '_b', '_c']), sorted(s.pop('segments').keys()))
 
         # aggregate segment info
-        self.assertEqual(s, {'num_search_segments': 3, 't_optimize': None, 't_optimize_in_millis': None, 'num_committed_segments': 3})
+        self.assertEqual(s, {'num_search_segments': 3, 't_optimize': '0.00s', 't_optimize_in_millis': 0, 'num_committed_segments': 3})
 
 
     def test_stats(self):
