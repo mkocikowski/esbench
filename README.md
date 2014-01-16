@@ -160,8 +160,32 @@ The 'show' command
 ------------------
 The 'show' command will retrieve previously recorded benchmark information
 from an ES instance, and format it and display it as requested. Running it
-without parameters will output tabular data for all benchmarks recorded on
-localhost. 
+without parameters will output data in csv format, with only most important
+columns present. There are many options available, bun in general, if you are
+not satisfied with what you get 'out of the box', the approach is to dump all
+the data into a csv, and use whatever tools you prefer to graph / analyze the
+data. When you run 'esbench show --help' you will get info on options
+available. You can run: 
+
+	esbench show --format tab
+
+to get the data formatted in a table, but honestly, you will need a really big
+screen (& tiny font) for that to be any use at this time. Since the data,
+columns, orders of magnitude, will all change if you go with data sets / query
+sets other than default, I'm not putting much time into 'canned' data
+analysis. Put it out to csv files, analyze with outside tools.
+
+Graphing
+--------
+
+	esbench show --help
+
+The basic idea is that you dump the fields in which you are interested into a
+csv file, and then use whatever tools you prefer to analyze and graph that
+data. However, 'esbench show --help' will show you the command line commands
+needed to graph the standard data (you will need to have gnuplot on your
+system). Since you can access data on remote systems ('--host' and '--port'
+arguments), you only need gnuplot on your workstation. 
 
 The 'dump' command
 ------------------
