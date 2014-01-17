@@ -74,7 +74,7 @@ esbench show > /tmp/esbench.csv && gnuplot -e "set terminal svg size 1000, 1000;
     parser_show.add_argument('--port', type=int, default=9200, help='elasticsearch port; (%(default)s)')
     parser_show.add_argument('--format', choices=['csv', 'tab'], default='csv', help="output format; (%(default)s)")
     parser_show.add_argument('--fields', metavar='REGEX', type=str, action='store', default=esbench.analyze.FIELDS, help='default: %(default)s')
-    parser_show.add_argument('ids', nargs='*', help='benchmark ids; (default: show all benchmarks)')
+    parser_show.add_argument('ids', nargs='*', default=['all'], help='benchmark ids; (default: show all benchmarks)')
 
 #     parser_clear = subparsers.add_parser('clear', help='clear recorded benchmarks')
 #     parser_clear.add_argument('-v', '--verbose', action='store_true')
@@ -84,7 +84,7 @@ esbench show > /tmp/esbench.csv && gnuplot -e "set terminal svg size 1000, 1000;
     parser_dump.add_argument('-v', '--verbose', action='store_true')
     parser_dump.add_argument('--host', type=str, default='localhost', help='elasticsearch host; (%(default)s)')
     parser_dump.add_argument('--port', type=int, default=9200, help='elasticsearch port; (%(default)s)')
-    parser_dump.add_argument('ids', nargs='*', help='benchmark ids; (default: show all benchmarks)')
+    parser_show.add_argument('ids', nargs='*', default=['all'], help='benchmark ids; (default: show all benchmarks)')
 
     return parser
 

@@ -34,15 +34,38 @@ def _get_benchmarks(conn=None, stats_index_name=esbench.STATS_INDEX_NAME):
 def _benchmarks(resp, benchmark_ids=None):
     """Process response from _get_benchmarks(), yielding benchmark dicts."""
 
+    if not benchmark_ids:
+        benchmark_ids = ['all']
+
     data = json.loads(resp.data)
+
     try:
-        for benchmark in data['hits']['hits']:
-            if benchmark_ids and not benchmark['_id'] in benchmark_ids:
+
+        benchmarks = data['hits']['hits']
+        for benchmark_id in benchmark_ids:
+
+            if benchmark_id == 'first':
+                yield benchmarks[0]
                 continue
-            else:
-                yield benchmark
+
+            if benchmark_id == 'last':
+                yield benchmarks[-1]
+                continue
+
+            try:
+                yield benchmarks[int(benchmark_id)]
+                continue
+            except (ValueError, IndexError) as exc:
+#                 logger.info(exc)
+                pass
+
+            for benchmark in benchmarks:
+                if (benchmark_id == 'all') or (benchmark_id == benchmark['_id']):
+                    yield benchmark
+
     except KeyError:
         logger.warning("no benchmarks found", exc_info=False)
+
     return
 
 

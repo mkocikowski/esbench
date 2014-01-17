@@ -15,7 +15,7 @@ import esbench.client
 
 class ClientTest(unittest.TestCase):
 
-    def test_args(self):
+    def test_args_run(self):
 
         parser = esbench.client.args_parser()
         args = parser.parse_args("run".split())
@@ -34,8 +34,26 @@ class ClientTest(unittest.TestCase):
                 'data': None,
                 'append': False,
                 'config_file_path': os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "../", "config.json")),
-                'host': 'localhost', 
-                'port': 9200, 
+                'host': 'localhost',
+                'port': 9200,
+            }
+        )
+
+
+    def test_args_show(self):
+
+        parser = esbench.client.args_parser()
+        args = parser.parse_args("show".split())
+#         print(args)
+        self.assertEqual(args.__dict__,
+            {
+                'command': 'show',
+                'fields': '(?!observation.segments.segments)((benchmark.meta.benchmark_start)|(observation.meta.benchmark_id)|(observation.meta.observation_id)|(observation.meta.observation_sequence_no)|(observation.segments.num_committed_segments)|(observation.segments.t_optimize_in_millis)|(observation.stats.docs.count)|(observation.stats.store.size_in_bytes)|(observation.stats.fielddata.memory_size_in_bytes)|(observation.stats.search.groups.*query_time_in_millis_per_query$))',
+                'host': 'localhost',
+                'port': 9200,
+                'format': 'csv',
+                'verbose': False,
+                'ids': ['all'],
             }
         )
 
