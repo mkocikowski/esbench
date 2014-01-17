@@ -56,9 +56,9 @@ esbench show
 # write csv-formatted data for benchmark bd97da35 to file foo.csv:
 esbench show bd97da35 > foo.csv
 # see fieldnames for default setting of '--fields':
-esbench show | head -1 | tr , '\\n'
+esbench show | head -1 | tr '\\t' '\\n'
 # see all possible fieldnames:
-esbench show --fields '.*' | head -1 | tr , '\\n'
+esbench show --fields '.*' | head -1 | tr '\\t' '\\n'
 # plot optimize time vs data size in gnuplot and open resulting graph in google chrome (on osx):
 esbench show > /tmp/esbench.csv && gnuplot -e "set terminal svg size 1000, 1000; set xlabel 'observation number'; plot '/tmp/esbench.csv' using 4:5 with fsteps title columnheader, '' using 4:(column(6)/(1000)) with fsteps title 'observation.segments.t_optimize_in_millis (SECONDS)'" > /tmp/esbench.svg && open -a 'Google Chrome' '/tmp/esbench.svg'
 # plot basic data in gnuplot and open resulting graph in google chrome (on osx):
