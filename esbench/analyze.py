@@ -245,6 +245,7 @@ FIELDS = (
             "(observation.meta.observation_id)|"
             "(observation.meta.observation_sequence_no)|"
             "(observation.segments.num_committed_segments)|"
+            "(observation.segments.num_search_segments)|"
             "(observation.segments.t_optimize_in_millis)|"
             "(observation.stats.docs.count)|"
             "(observation.stats.store.size_in_bytes)|"

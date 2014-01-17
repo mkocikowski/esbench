@@ -60,9 +60,9 @@ esbench show | head -1 | tr '\\t' '\\n'
 # see all possible fieldnames:
 esbench show --fields '.*' | head -1 | tr '\\t' '\\n'
 # plot optimize time vs data size in gnuplot and open resulting graph in google chrome (on osx):
-esbench show > /tmp/esbench.csv && gnuplot -e "set terminal svg size 1000, 1000; set xlabel 'observation number'; plot '/tmp/esbench.csv' using 4:5 with fsteps title columnheader, '' using 4:(column(6)/(1000)) with fsteps title 'observation.segments.t_optimize_in_millis (SECONDS)'" > /tmp/esbench.svg && open -a 'Google Chrome' '/tmp/esbench.svg'
+esbench show > /tmp/esbench.csv && gnuplot -e "set terminal svg size 1000, 1000; set xlabel 'observation number'; plot '/tmp/esbench.csv' using 4:5 with fsteps title columnheader, '' using 4:(column(7)/(1000)) with fsteps title 'observation.segments.t_optimize_in_millis (SECONDS)'" > /tmp/esbench.svg && open -a 'Google Chrome' '/tmp/esbench.svg'
 # plot basic data in gnuplot and open resulting graph in google chrome (on osx):
-esbench show > /tmp/esbench.csv && gnuplot -e "set terminal svg size 1000, 1000; set xlabel 'observation number'; plot for [col=9:11] '/tmp/esbench.csv' using 4:col with lines lw 3 title columnheader, '' using 4:5 with fsteps title columnheader, '' using 4:(column(8)/(2**20)) with fsteps title 'observation.stats.fielddata.memory_size_in_bytes (MB)', '' using 4:(column(12)/(2**30)) with fsteps title 'observation.stats.store.size_in_bytes (GB)'" > /tmp/esbench.svg && open -a 'Google Chrome' '/tmp/esbench.svg'
+esbench show > /tmp/esbench.csv && gnuplot -e "set terminal svg size 1000, 1000; set xlabel 'observation number'; plot for [col=10:12] '/tmp/esbench.csv' using 4:col with lines lw 3 title columnheader, '' using 4:5 with fsteps title columnheader, '' using 4:6 with fsteps title columnheader, '' using 4:(column(9)/(2**20)) with fsteps title 'observation.stats.fielddata.memory_size_in_bytes (MB)', '' using 4:(column(13)/(2**30)) with fsteps title 'observation.stats.store.size_in_bytes (GB)'" > /tmp/esbench.svg && open -a 'Google Chrome' '/tmp/esbench.svg'
 
 """
 
