@@ -249,7 +249,7 @@ def output_benchmark(fh=None, fmt=None, observations=None):
         print(tabulate.tabulate(values, headers=keys), file=fh)
 
     elif fmt == 'csv':
-        writer = csv.writer(fh)
+        writer = csv.writer(fh, delimiter="\t")
         writer.writerow(keys)
         writer.writerows(values)
 
