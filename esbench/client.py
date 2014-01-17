@@ -84,7 +84,7 @@ esbench show > /tmp/esbench.csv && gnuplot -e "set terminal svg size 1000, 1000;
     parser_dump.add_argument('-v', '--verbose', action='store_true')
     parser_dump.add_argument('--host', type=str, default='localhost', help='elasticsearch host; (%(default)s)')
     parser_dump.add_argument('--port', type=int, default=9200, help='elasticsearch port; (%(default)s)')
-    parser_show.add_argument('ids', nargs='*', default=['all'], help='benchmark ids; (default: show all benchmarks)')
+    parser_dump.add_argument('ids', nargs='*', default=['all'], help='benchmark ids; (default: show all benchmarks)')
 
     return parser
 
