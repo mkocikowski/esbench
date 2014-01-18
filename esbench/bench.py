@@ -78,8 +78,9 @@ class Observation(object):
             queries=None,
             reps=None,
             doc_index_name=None,
-            doctype=None,
-            record_segment_stats=False):
+            doctype=None, ):
+#             record_segment_stats=False):
+
 
         self.conn = conn
         self.stats_index_name = stats_index_name
@@ -87,7 +88,7 @@ class Observation(object):
         self.reps = reps # how many times each query will be executed
         self.doc_index_name = doc_index_name
         self.doctype = doctype
-        self.record_segment_stats = record_segment_stats
+#         self.record_segment_stats = record_segment_stats
 
         Observation._count += 1
         self.observation_sequence_no = Observation._count
@@ -103,7 +104,7 @@ class Observation(object):
         self.ts_stop = None
         self.t1 = time.time()
         self.t_optimize = 0
-        
+
 
     def run(self):
 
@@ -129,11 +130,17 @@ class Observation(object):
         _s = json.loads(resp.data)
 
         segments = {
-            "num_search_segments": _s['indices'][self.doc_index_name]['shards']['0'][0]['num_search_segments'],
-            "num_committed_segments": _s['indices'][self.doc_index_name]['shards']['0'][0]['num_committed_segments'],
+#             "num_search_segments": _s['indices'][self.doc_index_name]['shards']['0'][0]['num_search_segments'],
+            "num_search_segments": sum([s['num_search_segments'] for shard in _s['indices'][self.doc_index_name]['shards'].values() for s in shard]),
+#             "num_search_segments_primary": sum([s['num_search_segments'] for shard in _s['indices'][self.doc_index_name]['shards'].values() for s in shard if s['routing']['primary']]),
+#             "num_committed_segments": _s['indices'][self.doc_index_name]['shards']['0'][0]['num_committed_segments'],
+            "num_committed_segments": sum([s['num_committed_segments'] for shard in _s['indices'][self.doc_index_name]['shards'].values() for s in shard]),
+#             "num_committed_segments_primary": sum([s['num_committed_segments'] for shard in _s['indices'][self.doc_index_name]['shards'].values() for s in shard if s['routing']['primary']]),
             "t_optimize": "%.2fs" % (self.t_optimize, ),
-            "t_optimize_in_millis": int(self.t_optimize * 1000), 
-            "segments": _s['indices'][self.doc_index_name]['shards']['0'][0]['segments'] if self.record_segment_stats else None,
+            "t_optimize_in_millis": int(self.t_optimize * 1000),
+#             "segments": _s['indices'][self.doc_index_name]['shards']['0'][0]['segments'] if self.record_segment_stats else None,
+#             "segments": None,
+            "shards": sum([len(shard) for shard in _s['indices'][self.doc_index_name]['shards'].values()]),
         }
 
         return segments
@@ -242,6 +249,10 @@ class Benchmark(object):
         with open(argv.config_file_path, 'rU') as f:
             self.config = json.loads(f.read())
 
+        if argv.shards:
+            self.config['index']['settings']['index']['number_of_shards'] = argv.shards
+            logger.debug("overrode default shard setting with command line value: %i", argv.shards)
+
         self.doc_index_name = self.config['config']['name_index']
         self.doctype = self.config['config']['name_doctype']
 
@@ -267,7 +278,7 @@ class Benchmark(object):
                         reps = self.argv.repetitions,
                         doc_index_name = self.doc_index_name,
                         doctype = self.doctype,
-                        record_segment_stats = self.argv.record_segments,
+                        # record_segment_stats = self.argv.record_segments,
         )
 
         if not self.argv.no_optimize_calls:

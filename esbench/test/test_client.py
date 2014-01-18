@@ -22,7 +22,7 @@ class ClientTest(unittest.TestCase):
         self.assertEqual(args.__dict__,
             {
                 'no_optimize_calls': False,
-                'record_segments': False,
+#                 'record_segments': False,
                 'verbose': False,
                 'segments': None,
                 'repetitions': 100,
@@ -36,6 +36,7 @@ class ClientTest(unittest.TestCase):
                 'config_file_path': os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "../", "config.json")),
                 'host': 'localhost',
                 'port': 9200,
+                'shards': None,
             }
         )
 
@@ -48,7 +49,7 @@ class ClientTest(unittest.TestCase):
         self.assertEqual(args.__dict__,
             {
                 'command': 'show',
-                'fields': '(?!observation.segments.segments)((benchmark.meta.benchmark_start)|(observation.meta.benchmark_id)|(observation.meta.observation_id)|(observation.meta.observation_sequence_no)|(observation.segments.num_committed_segments)|(observation.segments.t_optimize_in_millis)|(observation.stats.docs.count)|(observation.stats.store.size_in_bytes)|(observation.stats.fielddata.memory_size_in_bytes)|(observation.stats.search.groups.*query_time_in_millis_per_query$))',
+                'fields': '(?!observation.segments.segments)((benchmark.meta.benchmark_start)|(observation.meta.benchmark_id)|(observation.meta.observation_id)|(observation.meta.observation_sequence_no)|(observation.segments.num_committed_segments)|(observation.segments.num_search_segments)|(observation.segments.t_optimize_in_millis)|(observation.stats.docs.count)|(observation.stats.store.size_in_bytes)|(observation.stats.fielddata.memory_size_in_bytes)|(observation.stats.search.groups.*query_time_in_millis_per_query$))',
                 'host': 'localhost',
                 'port': 9200,
                 'format': 'csv',
