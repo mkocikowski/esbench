@@ -37,7 +37,7 @@ def retry_and_reconnect_on_IOError(method):
                     self.close()
                 return res
             except IOError as (exc):
-                logger.warning("%s (%s) in retry_and_reconnect_on_IOError (timeout: %.2fs) try: %i, pause: %is", type(exc), exc, self.timeout*i, i, 1, exc_info=False)
+                logger.debug("%s (%s) in retry_and_reconnect_on_IOError (timeout: %.2fs) try: %i, pause: %is", type(exc), exc, self.timeout*i, i, 1, exc_info=False)
                 self.close()
         raise # re-raises the last exception, so most likely IOError
     return wrapper
@@ -80,9 +80,12 @@ class Conn(object):
         self.conn.request(method, path, data, head)
         resp = self.conn.getresponse()
         r_data = resp.read()
+
         if resp.status not in [200, 201]:
             logger.debug((resp.status, path, curl[:50]))
+
         return ApiResponse(resp.status, resp.reason, r_data, curl)
+
 
     @retry_and_reconnect_on_IOError
     def put(self, path, data):
@@ -96,15 +99,15 @@ class Conn(object):
         resp = self.conn.getresponse()
         r_data = resp.read()
 
-        if resp.status not in [200, 201]:
+        if resp.status == 413:
+            logger.debug((resp.status, path, len(data)))
+        elif resp.status >= 400:
+            logger.debug((resp.status, path, r_data))
+        elif resp.status not in [200, 201]:
             logger.debug((resp.status, path, curl[:50]))
 
-        if resp.status == 413:
-            logger.warning((resp.status, path, len(data)))
-        elif resp.status >= 400:
-            logger.warning((resp.status, path, r_data))
-
         return ApiResponse(resp.status, resp.reason, r_data, curl)
+
 
     @retry_and_reconnect_on_IOError
     def post(self, path, data):
@@ -120,15 +123,15 @@ class Conn(object):
         resp = self.conn.getresponse()
         r_data = resp.read()
 
-        if resp.status not in [200, 201]:
+        if resp.status == 413:
+            logger.debug((resp.status, path, len(data)))
+        elif resp.status >= 400:
+            logger.debug((resp.status, path, r_data))
+        elif resp.status not in [200, 201]:
             logger.debug((resp.status, path, curl[:50]))
 
-        if resp.status == 413:
-            logger.warning((resp.status, path, len(data)))
-        elif resp.status >= 400:
-            logger.warning((resp.status, path, r_data))
-
         return ApiResponse(resp.status, resp.reason, r_data, curl)
+
 
     @retry_and_reconnect_on_IOError
     def delete(self, path):
@@ -138,8 +141,10 @@ class Conn(object):
         self.conn.request(method, path)
         resp = self.conn.getresponse()
         data = resp.read()
+
         if resp.status not in [200, 201]:
             logger.debug((resp.status, path, curl[:50]))
+
         return ApiResponse(resp.status, resp.reason, data, curl)
 
 
