@@ -2,7 +2,24 @@
 # (c)2013 Mik Kocikowski, MIT License (http://opensource.org/licenses/MIT)
 # https://github.com/mkocikowski/esbench
 
-import itertools
+
+"""A benchmark alternatively loads data and runs observations.
+
+A benchmark consists of a set number of observations. Each observation
+executes a set number of queries, and records execution stats. In between
+observations, set amounts of data are inserted into the index. Load some data,
+run some queries, record stats, repeat. All stats are stored in a separate ES
+index ('esbench_stats') as doctypes 'obs' and 'bench'.
+
+Classes:
+
+    - SearchQuery: per-observation query wrapper
+    - Observation: repeated n-times constitutes a benchmark
+    - Benchmark: orchestrates data loading and observations
+
+"""
+
+
 import logging
 import json
 import time
@@ -41,6 +58,17 @@ def timestamp(microseconds=False):
 
 
 class SearchQuery(object):
+    """Each observation has a SearchQuery object for each bench query.
+
+    The 'magic' is that each SearchQuery has a 'stats' field which is unique
+    to this query / observation combination. This is what allows for tracking
+    query execution stats with the 'stats group' unique to this particular
+    observation.
+
+    In addition, the execute() method will do basic templating, replacing the
+    'variable' element in query template with a random string.
+
+    """
 
     def __init__(self, name, query, observation_id, index, doctype):
 
@@ -67,6 +95,23 @@ class SearchQuery(object):
 
 
 class Observation(object):
+    """Runs specified queries and records the results.
+
+    Even though the queries are the same for each observation in a benchmark,
+    each observation creates unique stats groups for each of its queries -
+    this is what allows to pull stats specific to an observation from ES stats
+    api.
+
+    Methods:
+
+        _segments(): segment stats
+        _stats(): 'stats group' (query exec time), memory, and fielddata stats
+        _cluster_stats(): cluster stats snapshot
+
+        run(): run an observation comprising of a set of queries
+        record(): pull in stats data and record it
+
+    """
 
     _count = 0
 
@@ -79,8 +124,6 @@ class Observation(object):
             reps=None,
             doc_index_name=None,
             doctype=None, ):
-#             record_segment_stats=False):
-
 
         self.conn = conn
         self.stats_index_name = stats_index_name
@@ -88,7 +131,6 @@ class Observation(object):
         self.reps = reps # how many times each query will be executed
         self.doc_index_name = doc_index_name
         self.doctype = doctype
-#         self.record_segment_stats = record_segment_stats
 
         Observation._count += 1
         self.observation_sequence_no = Observation._count
@@ -125,21 +167,28 @@ class Observation(object):
 
 
     def _segments(self, segments_f=esbench.api.index_get_segments):
+        """Get and massage segment stats data.
+
+        By default, the "/[index]/_segments" api end point is used. This
+        returns a lot of per-shard data, which gets aggregated, returning a
+        dictionary with following keys:
+
+            - "num_search_segments": sum for all primaries and replicas
+            - "num_committed_segments": sum for all primaries and replicas
+            - "t_optimize": time spent on the explicit optimize call (0 if call was not made)
+            - "t_optimize_in_millis"
+            - "shards": total number of primaries and replicas
+
+        """
 
         resp = segments_f(self.conn, self.doc_index_name)
         _s = json.loads(resp.data)
 
         segments = {
-#             "num_search_segments": _s['indices'][self.doc_index_name]['shards']['0'][0]['num_search_segments'],
             "num_search_segments": sum([s['num_search_segments'] for shard in _s['indices'][self.doc_index_name]['shards'].values() for s in shard]),
-#             "num_search_segments_primary": sum([s['num_search_segments'] for shard in _s['indices'][self.doc_index_name]['shards'].values() for s in shard if s['routing']['primary']]),
-#             "num_committed_segments": _s['indices'][self.doc_index_name]['shards']['0'][0]['num_committed_segments'],
             "num_committed_segments": sum([s['num_committed_segments'] for shard in _s['indices'][self.doc_index_name]['shards'].values() for s in shard]),
-#             "num_committed_segments_primary": sum([s['num_committed_segments'] for shard in _s['indices'][self.doc_index_name]['shards'].values() for s in shard if s['routing']['primary']]),
             "t_optimize": "%.2fs" % (self.t_optimize, ),
             "t_optimize_in_millis": int(self.t_optimize * 1000),
-#             "segments": _s['indices'][self.doc_index_name]['shards']['0'][0]['segments'] if self.record_segment_stats else None,
-#             "segments": None,
             "shards": sum([len(shard) for shard in _s['indices'][self.doc_index_name]['shards'].values()]),
         }
 
@@ -147,6 +196,15 @@ class Observation(object):
 
 
     def _stats(self, stats_f=esbench.api.index_get_stats):
+        """Pull in stats group data.
+
+        ES keeps track of stats groups (exec time etc) defined in the 'stats'
+        field of each query. Each observation will create unique 'stats'
+        values for its queries (see SearchQuery class) and so be able to see
+        stats just for the queries run as part of this specific observation.
+        This mathod retrieves the stats and parses them.
+
+        """
 
         # we need to specifically ask for the stats groups we want, by name.
         stats_group_names = [q.stats_group_name for q in self.queries]
@@ -210,7 +268,7 @@ class Observation(object):
 
     def record(self):
 
-        self.t_total = time.time() - self.t1
+        t_total = time.time() - self.t1
         obs = {
             'meta': {
                 'benchmark_id': self.benchmark_id,
@@ -218,8 +276,8 @@ class Observation(object):
                 'observation_sequence_no': self.observation_sequence_no,
                 'observation_start': self.ts_start,
                 'observation_stop': self.ts_stop,
-                't_total': "%.2fm" % (self.t_total / 60.0),
-                't_total_in_millis': int(self.t_total * 1000),
+                't_total': "%.2fm" % (t_total / 60.0),
+                't_total_in_millis': int(t_total * 1000),
             },
             'segments': self._segments(),
             'stats': self._stats(),
@@ -236,12 +294,11 @@ class Observation(object):
 
 
 class Benchmark(object):
+    """Orchestrates the loading of data and running of observations. """
 
-    def __init__(self, cmnd=None, argv=None, conn=None, stats_index_name=None):
+    def __init__(self, argv=None, conn=None, stats_index_name=None):
 
         self.benchmark_id = uuid()
-        # TODO: cmnd doesn't seem to do anything, see if can get rid of it
-        self.cmnd = cmnd
         self.argv = argv
         self.conn = conn
 
@@ -271,14 +328,13 @@ class Benchmark(object):
     def observe(self, obs_cls=Observation):
 
         observation = obs_cls(
-                        conn = self.conn,
-                        stats_index_name = self.stats_index_name,
-                        benchmark_id = self.benchmark_id,
-                        queries = self.config['queries'],
-                        reps = self.argv.repetitions,
-                        doc_index_name = self.doc_index_name,
-                        doctype = self.doctype,
-                        # record_segment_stats = self.argv.record_segments,
+                        conn=self.conn,
+                        stats_index_name=self.stats_index_name,
+                        benchmark_id=self.benchmark_id,
+                        queries=self.config['queries'],
+                        reps=self.argv.repetitions,
+                        doc_index_name=self.doc_index_name,
+                        doctype=self.doctype,
         )
 
         if not self.argv.no_optimize_calls:
@@ -363,15 +419,11 @@ class Benchmark(object):
                 't_total': "%.2fm" % (self.t_total / 60.0),
                 't_total_in_millis': int(self.t_total * 1000),
                 'argv': self.argv.__dict__,
-    #             'cmnd': self.cmnd,
                 'config': json.dumps(self.config, sort_keys=True),
-    #             'config': self.config,
             },
 
             'cluster': self._get_cluster_info(),
         }
-#         stat['config']['queries'] = json.dumps(stat['config']['queries'])
-#         stat['config']['index'] = json.dumps(stat['config']['index'])
 
         data = json.dumps(stat, sort_keys=True)
         path = '%s/bench/%s' % (self.stats_index_name, self,)

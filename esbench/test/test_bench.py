@@ -84,28 +84,10 @@ class ObservationTest(unittest.TestCase):
 
         def _f(conn, index):
             return esbench.api.ApiResponse(200, 'ok', """{"ok":true,"_shards":{"total":1,"successful":1,"failed":0},"indices":{"esbench_test":{"shards":{"0":[{"routing":{"state":"STARTED","primary":true,"node":"YFJaFqa6Q-m-FPY_IRQ5nw"},"num_committed_segments":3,"num_search_segments":3,"segments":{"_a":{"generation":10,"num_docs":80,"deleted_docs":0,"size":"2.4mb","size_in_bytes":2524210,"committed":true,"search":true,"version":"4.4","compound":false},"_b":{"generation":11,"num_docs":10,"deleted_docs":0,"size":"271.7kb","size_in_bytes":278301,"committed":true,"search":true,"version":"4.4","compound":true},"_c":{"generation":12,"num_docs":10,"deleted_docs":0,"size":"225.3kb","size_in_bytes":230761,"committed":true,"search":true,"version":"4.4","compound":true}}}]}}}}""", "")
-
-        # default behavior is to not return detailed segment info
         s = self.observation._segments(segments_f=_f)
         self.assertEqual(s, {'num_search_segments': 3, 't_optimize': '0.00s', 't_optimize_in_millis': 0, 'num_committed_segments': 3, 'shards': 1})
 
-#
-#         # no instantiate observation with 'record_segment_stats' set to True
-#         self.observation = esbench.bench.Observation(
-#                         conn = self.conn,
-#                         stats_index_name = 'stats',
-#                         benchmark_id = 'bench1',
-#                         queries = self.queries,
-#                         reps = 10,
-#                         doc_index_name = 'test',
-#                         doctype = 'doc',
-#                         record_segment_stats = True,
-#         )
-#         s = self.observation._segments(segments_f=_f)
-#         self.assertEqual(sorted(['_a', '_b', '_c']), sorted(s.pop('segments').keys()))
-#
-
-
+        # test aggregation for multiple shards
         def _f(conn, index):
             return esbench.api.ApiResponse(200, 'ok', """{"ok":true,"_shards":{"total":6,"successful":6,"failed":0},"indices":{"esbench_test":{"shards":{"0":[{"routing":{"state":"STARTED","primary":false,"node":"HwNlNZuISY6xSkwJN3njdA"},"num_committed_segments":5,"num_search_segments":5,"segments":{"_0":{"generation":0,"num_docs":3,"deleted_docs":0,"size":"83.8kb","size_in_bytes":85904,"committed":true,"search":true,"version":"4.6","compound":true},"_1":{"generation":1,"num_docs":1,"deleted_docs":0,"size":"53.5kb","size_in_bytes":54833,"committed":true,"search":true,"version":"4.6","compound":true},"_2":{"generation":2,"num_docs":2,"deleted_docs":0,"size":"69.5kb","size_in_bytes":71186,"committed":true,"search":true,"version":"4.6","compound":true},"_3":{"generation":3,"num_docs":3,"deleted_docs":0,"size":"108.5kb","size_in_bytes":111161,"committed":true,"search":true,"version":"4.6","compound":true},"_4":{"generation":4,"num_docs":2,"deleted_docs":0,"size":"73kb","size_in_bytes":74845,"committed":true,"search":true,"version":"4.6","compound":true}}},{"routing":{"state":"STARTED","primary":true,"node":"paqTP4jgTtKtBt4vN2kgeQ"},"num_committed_segments":5,"num_search_segments":5,"segments":{"_0":{"generation":0,"num_docs":3,"deleted_docs":0,"size":"83.8kb","size_in_bytes":85904,"committed":true,"search":true,"version":"4.6","compound":true},"_1":{"generation":1,"num_docs":1,"deleted_docs":0,"size":"53.5kb","size_in_bytes":54833,"committed":true,"search":true,"version":"4.6","compound":true},"_2":{"generation":2,"num_docs":2,"deleted_docs":0,"size":"69.5kb","size_in_bytes":71186,"committed":true,"search":true,"version":"4.6","compound":true},"_3":{"generation":3,"num_docs":3,"deleted_docs":0,"size":"108.5kb","size_in_bytes":111161,"committed":true,"search":true,"version":"4.6","compound":true},"_4":{"generation":4,"num_docs":2,"deleted_docs":0,"size":"73kb","size_in_bytes":74845,"committed":true,"search":true,"version":"4.6","compound":true}}},{"routing":{"state":"STARTED","primary":false,"node":"nqvaE38LTESFVxwxu-4s6A"},"num_committed_segments":5,"num_search_segments":5,"segments":{"_0":{"generation":0,"num_docs":3,"deleted_docs":0,"size":"83.8kb","size_in_bytes":85904,"committed":true,"search":true,"version":"4.6","compound":true},"_1":{"generation":1,"num_docs":1,"deleted_docs":0,"size":"53.5kb","size_in_bytes":54833,"committed":true,"search":true,"version":"4.6","compound":true},"_2":{"generation":2,"num_docs":2,"deleted_docs":0,"size":"69.5kb","size_in_bytes":71186,"committed":true,"search":true,"version":"4.6","compound":true},"_3":{"generation":3,"num_docs":3,"deleted_docs":0,"size":"108.5kb","size_in_bytes":111161,"committed":true,"search":true,"version":"4.6","compound":true},"_4":{"generation":4,"num_docs":2,"deleted_docs":0,"size":"73kb","size_in_bytes":74845,"committed":true,"search":true,"version":"4.6","compound":true}}}],"1":[{"routing":{"state":"STARTED","primary":false,"node":"HwNlNZuISY6xSkwJN3njdA"},"num_committed_segments":5,"num_search_segments":5,"segments":{"_0":{"generation":0,"num_docs":3,"deleted_docs":0,"size":"78.7kb","size_in_bytes":80655,"committed":true,"search":true,"version":"4.6","compound":true},"_1":{"generation":1,"num_docs":4,"deleted_docs":0,"size":"101.8kb","size_in_bytes":104339,"committed":true,"search":true,"version":"4.6","compound":true},"_2":{"generation":2,"num_docs":3,"deleted_docs":0,"size":"76.6kb","size_in_bytes":78520,"committed":true,"search":true,"version":"4.6","compound":true},"_3":{"generation":3,"num_docs":2,"deleted_docs":0,"size":"51.5kb","size_in_bytes":52782,"committed":true,"search":true,"version":"4.6","compound":true},"_4":{"generation":4,"num_docs":3,"deleted_docs":0,"size":"112.9kb","size_in_bytes":115657,"committed":true,"search":true,"version":"4.6","compound":true}}},{"routing":{"state":"STARTED","primary":false,"node":"paqTP4jgTtKtBt4vN2kgeQ"},"num_committed_segments":5,"num_search_segments":5,"segments":{"_0":{"generation":0,"num_docs":3,"deleted_docs":0,"size":"78.7kb","size_in_bytes":80655,"committed":true,"search":true,"version":"4.6","compound":true},"_1":{"generation":1,"num_docs":4,"deleted_docs":0,"size":"101.8kb","size_in_bytes":104339,"committed":true,"search":true,"version":"4.6","compound":true},"_2":{"generation":2,"num_docs":3,"deleted_docs":0,"size":"76.6kb","size_in_bytes":78520,"committed":true,"search":true,"version":"4.6","compound":true},"_3":{"generation":3,"num_docs":2,"deleted_docs":0,"size":"51.5kb","size_in_bytes":52782,"committed":true,"search":true,"version":"4.6","compound":true},"_4":{"generation":4,"num_docs":3,"deleted_docs":0,"size":"112.9kb","size_in_bytes":115657,"committed":true,"search":true,"version":"4.6","compound":true}}},{"routing":{"state":"STARTED","primary":true,"node":"nqvaE38LTESFVxwxu-4s6A"},"num_committed_segments":5,"num_search_segments":5,"segments":{"_0":{"generation":0,"num_docs":3,"deleted_docs":0,"size":"78.7kb","size_in_bytes":80655,"committed":true,"search":true,"version":"4.6","compound":true},"_1":{"generation":1,"num_docs":4,"deleted_docs":0,"size":"101.8kb","size_in_bytes":104339,"committed":true,"search":true,"version":"4.6","compound":true},"_2":{"generation":2,"num_docs":3,"deleted_docs":0,"size":"76.6kb","size_in_bytes":78520,"committed":true,"search":true,"version":"4.6","compound":true},"_3":{"generation":3,"num_docs":2,"deleted_docs":0,"size":"51.5kb","size_in_bytes":52782,"committed":true,"search":true,"version":"4.6","compound":true},"_4":{"generation":4,"num_docs":3,"deleted_docs":0,"size":"112.9kb","size_in_bytes":115657,"committed":true,"search":true,"version":"4.6","compound":true}}}]}}}}""", '')
         s = self.observation._segments(segments_f=_f)
@@ -166,9 +148,8 @@ class BenchmarkTest(unittest.TestCase):
 
     def setUp(self):
         self.conn = esbench.api.Conn(conn_cls=esbench.test.test_api.MockHTTPConnection)
-        self.cmnd = "run"
-        self.argv = esbench.client.args_parser().parse_args(self.cmnd.split())
-        self.bench = esbench.bench.Benchmark(self.cmnd, self.argv, self.conn)
+        self.argv = esbench.client.args_parser().parse_args("run".split())
+        self.bench = esbench.bench.Benchmark(self.argv, self.conn)
 
 
     def test_init(self):
@@ -207,7 +188,7 @@ class BenchmarkTest(unittest.TestCase):
         self.conn = esbench.api.Conn(conn_cls=esbench.test.test_api.MockHTTPConnection)
         self.cmnd = "run --append"
         self.argv = esbench.client.args_parser().parse_args(self.cmnd.split())
-        self.bench = esbench.bench.Benchmark(self.cmnd, self.argv, self.conn)
+        self.bench = esbench.bench.Benchmark(argv=self.argv, conn=self.conn)
         batches = esbench.data.batches_iterator(("line_%02i" % i for i in range(100)), batch_count=10, max_n=100, max_byte_size=0)
         self.bench.observe = _obs
         self.bench.run(batches)
@@ -219,7 +200,7 @@ class BenchmarkTest(unittest.TestCase):
         self.conn = esbench.api.Conn(conn_cls=esbench.test.test_api.MockHTTPConnection)
         self.cmnd = "run --append --observations 5"
         self.argv = esbench.client.args_parser().parse_args(self.cmnd.split())
-        self.bench = esbench.bench.Benchmark(self.cmnd, self.argv, self.conn)
+        self.bench = esbench.bench.Benchmark(argv=self.argv, conn=self.conn)
         batches = esbench.data.batches_iterator(("line_%02i" % i for i in range(100)), batch_count=5, max_n=100, max_byte_size=0)
         self.bench.observe = _obs
         self.bench.run(batches)
