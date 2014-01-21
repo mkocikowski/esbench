@@ -115,7 +115,7 @@ argument. There are 3 sections to the config file:
 
 1. 'queries': here you define the queries which will be run against the test data. Each key is a human-readable name, and the value is an ES query. This is the section which you want to customize to match your use patterns; if you are using your own data source with structure different than the default data source, then you definitely need to change the queries. 
 2. 'index': settings used for creating test 'esbench_test' index into which test data is loaded. Default shards 1/0, basic mapping. You can change this, specifically the mapping, if you want to experiment with different data sources. 
-3. 'config': basic configuration, will be expanded in 1.0.0 to allow to supplement command-line arguments, useless for now;
+3. 'config': basic configuration, command line arguments override these settings.
 
 You can specify the config file to use with the '--config-file-path' flag to
 the 'run' command. 

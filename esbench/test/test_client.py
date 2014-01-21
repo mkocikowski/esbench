@@ -120,6 +120,7 @@ class TestConfig(unittest.TestCase):
         argv = esbench.client.args_parser().parse_args("run".split())
         c = esbench.client.merge_config(argv=argv, config=copy.deepcopy(self.base_config))
         c['config']['name'] = None # need to clear it as it is a timestamp, will fail tests, changes at every test run
+        c['config']['config_file_path'] = None # ditto
         self.assertEqual(c, {
                 'index': {
                     'settings': {
@@ -139,7 +140,7 @@ class TestConfig(unittest.TestCase):
                     'command': 'run',
                     'observations': 10,
                     'host': 'localhost',
-                    'config_file_path': '/Users/z013rqg/dev/esbench/esbench/config.json',
+                    'config_file_path': None,
                     'data': None,
                     'port': 9200,
                     'append': False,
