@@ -23,8 +23,10 @@ def args_parser():
 
     epilog = """
 To get help for a command, do 'esbench command -h'
+
 Other commands:
-curl -XDELETE http://localhost:9200/esbench_stats # delete existing benchmarks
+curl -XDELETE localhost:9200/esbench_* # delete existing benchmarks
+\t
 """
 
     parser = argparse.ArgumentParser(description="Elasticsearch benchmark runner (%s)" % (esbench.__version__, ), epilog=epilog, formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -54,19 +56,28 @@ curl -XDELETE http://localhost:9200/esbench_stats # delete existing benchmarks
 
     epilog_show = """
 Sample use:
+
 # output tabulated, all benchmarks, default fields, to stdout:
 esbench show
+
 # write csv-formatted data for benchmark bd97da35 to file foo.csv:
 esbench show bd97da35 > foo.csv
+
 # see fieldnames for default setting of '--fields':
 esbench show | head -1 | tr '\\t' '\\n'
+
 # see all possible fieldnames:
 esbench show --fields '.*' | head -1 | tr '\\t' '\\n'
+
 # plot optimize time vs data size in gnuplot and open resulting graph in google chrome (on osx):
 esbench show > /tmp/esbench.csv && gnuplot -e "set terminal svg size 1000, 1000; set xlabel 'observation number'; plot '/tmp/esbench.csv' using 4:5 with fsteps title columnheader, '' using 4:(column(7)/(1000)) with fsteps title 'observation.segments.t_optimize_in_millis (SECONDS)'" > /tmp/esbench.svg && open -a 'Google Chrome' '/tmp/esbench.svg'
+
 # plot basic data in gnuplot and open resulting graph in google chrome (on osx):
 esbench show > /tmp/esbench.csv && gnuplot -e "set terminal svg size 1000, 1000; set xlabel 'observation number'; plot for [col=10:12] '/tmp/esbench.csv' using 4:col with lines lw 3 title columnheader, '' using 4:5 with fsteps title columnheader, '' using 4:6 with fsteps title columnheader, '' using 4:(column(9)/(2**20)) with fsteps title 'observation.stats.fielddata.memory_size_in_bytes (MB)', '' using 4:(column(13)/(2**30)) with fsteps title 'observation.stats.store.size_in_bytes (GB)'" > /tmp/esbench.svg && open -a 'Google Chrome' '/tmp/esbench.svg'
 
+In general, if the 'canned' fields / graph do not meet your needs, dump all
+the fields into a csv and graph /analyze it with whatever you have.
+\t
 """
 
 
@@ -170,6 +181,8 @@ def main():
             elif args.command == 'dump':
                 esbench.analyze.dump_benchmarks(conn=conn, benchmark_ids=args.ids)
 
+        except IOError as exc:
+            logger.debug(exc, exc_info=False)
         except Exception as exc:
             logger.error(exc, exc_info=True)
 

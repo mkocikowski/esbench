@@ -143,39 +143,6 @@ def filter_tuples(tuples=None, pattern=".*", key_f=lambda x: x[0]):
     filtered = [t for t in tuples if compiled.match(key_f(t))]
     return sorted(filtered, key=key_f)
 
-#
-#
-#     compiled = [re.compile(m, re.IGNORECASE) for m in matches]
-#     def passes(s):
-#         for r in compiled:
-#             if r.match(s):
-#                 return True
-#         return False
-#
-#     return sorted([t for t in tuples if passes(key_f(t))], key=key_f)
-
-
-# def flatten_container(container=None, flat=None, prefix=None):
-#     """Flattens a container (dict, list, set).
-#
-#     """
-#
-#     if flat is None:
-#         flat = list()
-#
-#     if type(container) in [str, unicode, int, float, bool, None]:
-#         flat.append((prefix, container))
-#
-#     elif type(container) is dict:
-#         for key in container:
-#             flatten_container(container=container[key], flat=flat, prefix=("%s.%s" % (prefix, key)) if prefix else key)
-#
-#     elif type(container) is list:
-#         for n, v in enumerate(container):
-#             flatten_container(container=v, flat=flat, prefix=("%s.%i" % (prefix, n)) if prefix else str(n))
-#
-#     return flat
-
 
 def flatten_container(container=None):
     """Flattens a container (dict, list, set).
@@ -260,7 +227,6 @@ FIELDS = (
 def output_benchmark(fh=None, fmt=None, observations=None):
 
     keys = [t[0] for t in observations[0]]
-#     keys = [".".join(t[0].split(".")[-2:]) for t in observations[0]]
     values = [[t[1] for t in o] for o in observations]
 
     if fmt == 'tab':
@@ -269,7 +235,6 @@ def output_benchmark(fh=None, fmt=None, observations=None):
             s = "".join([c for c in s if c not in "aeiou"])
             return s
         keys = [".".join(k.split(".")[-2:]) for k in keys]
-#         keys = [_shorten(k) for k in keys]
         print(tabulate.tabulate(values, headers=keys), file=fh)
 
     elif fmt == 'csv':
@@ -290,101 +255,13 @@ def show_benchmarks(conn=None, benchmark_ids=None, fields=None, fmt=None, fh=Non
         output_benchmark(fh=fh, fmt=fmt, observations=b)
 
 
-
-#
-# def groups(conn, benchmark_ids=None):
-#     for data in get_data(conn=conn, benchmark_ids=benchmark_ids):
-#         # each observation contains stats groups - here referred to as
-#         # 'groups' which record information on each of the queries which
-#         # form part of the benchmark. a stats group in context (number of
-#         # doucments in the index, benchmark info) forms the basic unit of
-#         # measured data
-#         gs = data['observation']['stats']['search']['groups']
-#         for name, group in gs.items():
-#             yield data['benchmark'], data['observation'], (name, group)
-#
-#
-# StatRecord = collections.namedtuple('StatRecord', [
-#         'bench_id',
-#         'bench_name',
-#         'obs_id',
-#         'obs_no',
-#         'doc_cnt',
-#         'seg_cnt',
-#         'size_b',
-#         'field_data_b',
-#         'heap_used_b',
-#         'heap_used_pct',
-#         'open_fd',
-#         't_index_ms',
-#         'query_name',
-#         'n_query',
-#         't_query_ms',
-#         't_fetch_ms',
-#         't_client_ms',
-#     ]
-# )
-#
-#
-# def stat_tuple(benchmark, observation, stat):
-#     stat_name, stat_data = stat
-#     record = StatRecord(
-#             bench_id=benchmark['_id'],
-#             bench_name=benchmark.get('benchmark_name', 'unknown'),
-#             obs_id=observation['_id'],
-#             obs_no=observation['meta']['observation_sequence_no'],
-#             doc_cnt=observation['stats']['docs']['count'],
-#             seg_cnt=observation['segments']['num_search_segments'],
-#             size_b=observation['stats']['store']['size_in_bytes'],
-#             field_data_b=observation['stats']['fielddata']['memory_size_in_bytes'],
-#             heap_used_b=[v['jvm']['mem']['heap_used_in_bytes'] for _, v in observation['cluster']['nodes'].items()][0],
-#             heap_used_pct=[v['jvm']['mem']['heap_used_percent'] for _, v in observation['cluster']['nodes'].items()][0],
-#             open_fd=[v['process']['open_file_descriptors'] for _, v in observation['cluster']['nodes'].items()][0],
-#             t_index_ms=observation['stats']['indexing']['index_time_in_millis'],
-#             query_name=stat_name,
-#             n_query=stat_data['query_total'],
-#             t_query_ms=stat_data['query_time_in_millis'],
-#             t_fetch_ms=stat_data['fetch_time_in_millis'],
-#             t_client_ms=stat_data['client_time_in_millis'],
-#     )
-#     return record
-#
-#
-# def get_group_tuples(conn, benchmark_ids=None, sort_f=lambda stat: (stat.bench_id, stat.query_name, stat.obs_no)):
-#     # set sort_f to None to not sort
-#     data = [stat_tuple(benchmark, observation, stat) for benchmark, observation, stat in groups(conn, benchmark_ids)]
-#     data = sorted(data, key=sort_f)
-#     return data
-#
-#
-#
-#
-# def show_benchmarks(conn, benchmark_ids=None, sample=1, fmt='tab', indent=4):
-#     data = get_group_tuples(conn, benchmark_ids)
-#     if data:
-#         legend = """
-# ------------------------------------------------------------------------------
-# All times recorded aggregate, look at the related n_ value. So if 'n_query' == 100, and 't_query_ms' == 1000, it means
-# that it took 1000ms to run the query 100 times, so 10ms per query.
-# ------------------------------------------------------------------------------
-# """.strip()
-#         print(legend)
-#         print(tabulate.tabulate(data, headers=data[0]._fields))
-#         print(legend)
-#
-#
-#
-
-
-
-
-def dump_benchmarks(conn=None, ids=None, stats_index_name=esbench.STATS_INDEX_NAME):
+def dump_benchmarks(conn=None, benchmark_ids=None, stats_index_name=esbench.STATS_INDEX_NAME):
     """Dump benchmark data as a sequence of curl calls.
 
     You can save these calls to a file, and then replay them somewhere else.
     """
 
-    for benchmark in _benchmarks(_get_benchmarks(conn=conn, stats_index_name=stats_index_name), ids):
+    for benchmark in _benchmarks(_get_benchmarks(conn=conn, stats_index_name=stats_index_name), benchmark_ids):
         curl = """curl -XPUT 'http://localhost:9200/%s/bench/%s' -d '%s'""" % (stats_index_name, benchmark['_id'], json.dumps(benchmark['_source']))
         print(curl)
         for o in _observations(_get_observations(conn, benchmark['_id'], stats_index_name=stats_index_name)):
