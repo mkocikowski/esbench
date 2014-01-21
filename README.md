@@ -1,8 +1,3 @@
-This is not fit for public consumption yet! See the milestones in 'issues' -
-the initial public-ish issue will be around new year, and the 1.0.0 is
-supposed to come out by Jan 20, 2013. As of now, this is very much work in
-progress. 
-
 Elasticsearch benchmarking tools
 --------------------------------
 'esbench' is a set of python 2.7 scripts for benchmarking Elasticsearch. The
