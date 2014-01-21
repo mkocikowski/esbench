@@ -37,17 +37,18 @@ curl -XDELETE http://localhost:9200/esbench_stats # delete existing benchmarks
     parser_run.add_argument('-v', '--verbose', action='store_true')
     parser_run.add_argument('--host', type=str, default='localhost', help='elasticsearch host; (%(default)s)')
     parser_run.add_argument('--port', type=int, default=9200, help='elasticsearch port; (%(default)s)')
-    parser_run.add_argument('--observations', metavar='N', type=int, default=10, help='run n observations; (%(default)i)')
-    parser_run.add_argument('--segments', type=int, metavar='N', default=None, help='max_num_segments for optimize calls; (%(default)s)')
-    parser_run.add_argument('--repetitions', metavar='N', type=int, default=100, help='run each query n times per observation; (%(default)i)')
+
+    parser_run.add_argument('--segments', type=int, metavar='N', default=None, help='if set, run optimize before each observation')
+    parser_run.add_argument('--shards', metavar='N', action='store', type=int, help="create test index with N primaries")
+    parser_run.add_argument('--observations', metavar='N', type=int, default=None, help='run n observations')
+    parser_run.add_argument('--reps', metavar='N', type=int, default=None, help='run each query n times per observation')
+
     parser_run.add_argument('--no-load', action='store_true', help="if set, do not load data, just run observations")
-    parser_run.add_argument('--no-optimize-calls', action='store_true', help="if set, do not optimize before observations")
-    parser_run.add_argument('--shards', action='store', type=int, help="if set, create test index with N primary shards, overriding config")
-#     parser_run.add_argument('--record-segments', action='store_true', help="if set, record detailed per-segment stats")
-    parser_run.add_argument('--config-file-path', metavar='', type=str, default='%s/config.json' % (os.path.dirname(os.path.abspath(__file__)), ), help="path to json config file; (%(default)s)")
-    parser_run.add_argument('--name', type=str, action='store', default="%s::%s" % (socket.gethostname(), esbench.bench.timestamp()), help="human readable name of the benchmark; (%(default)s)")
     parser_run.add_argument('--append', action='store_true', help="if set, append data to the index; (%(default)s)")
     parser_run.add_argument('--data', metavar='PATH', type=str, action='store', default=None, help="read data from PATH; set to /dev/stdin to read from stdin. Set this only if you want to provide your own data, by default US Patent Application data will be used; (%(default)s)")
+
+    parser_run.add_argument('--config-file-path', metavar='', type=str, default='%s/config.json' % (os.path.dirname(os.path.abspath(__file__)), ), help="path to json config file; (%(default)s)")
+    parser_run.add_argument('--name', type=str, action='store', default="%s::%s" % (socket.gethostname(), esbench.bench.timestamp()), help="human readable name of the benchmark; (%(default)s)")
     parser_run.add_argument('maxsize', nargs="?", type=str, default='1mb', help="max size of the index, as either the number of documents or byte size. To index 100 documents, set it to 100; to index 1gb of documents, set it to 1gb. When setting the byte size of data, best effort will be made to run observations at even intervals, and the index bytesize will be ballpark, not the exact figure you specified. The default USPTO Patent Application data set has 123GB of data / 2.5m documents, so if you want more, you'll need to look elsewhere (or feed the same data in more than once); (%(default)s)")
 
     epilog_show = """
@@ -70,16 +71,11 @@ esbench show > /tmp/esbench.csv && gnuplot -e "set terminal svg size 1000, 1000;
 
     parser_show = subparsers.add_parser('show', help='show data from recorded benchmarks', epilog=epilog_show, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser_show.add_argument('-v', '--verbose', action='store_true')
-#     parser_show.add_argument('--sample', metavar='N', type=int, default=1, help='sample every Nth observation; (%(default)i)')
     parser_show.add_argument('--host', type=str, default='localhost', help='elasticsearch host; (%(default)s)')
     parser_show.add_argument('--port', type=int, default=9200, help='elasticsearch port; (%(default)s)')
     parser_show.add_argument('--format', choices=['csv', 'tab'], default='csv', help="output format; (%(default)s)")
     parser_show.add_argument('--fields', metavar='REGEX', type=str, action='store', default=esbench.analyze.FIELDS, help='default: %(default)s')
     parser_show.add_argument('ids', nargs='*', default=['all'], help='benchmark ids; (default: show all benchmarks)')
-
-#     parser_clear = subparsers.add_parser('clear', help='clear recorded benchmarks')
-#     parser_clear.add_argument('-v', '--verbose', action='store_true')
-#     parser_clear.add_argument('ids', nargs='*')
 
     parser_dump = subparsers.add_parser('dump', help='curl dump recorded benchmarks')
     parser_dump.add_argument('-v', '--verbose', action='store_true')
@@ -120,15 +116,15 @@ def main():
         try:
 
             if args.command == 'run':
-                benchmark = esbench.bench.Benchmark(argv=args, conn=conn, stats_index_name=esbench.STATS_INDEX_NAME)
+                benchmark = esbench.bench.Benchmark(argv=args, conn=conn)
                 benchmark.prepare()
                 if args.no_load:
-                    for _ in range(args.observations):
+                    for _ in range(benchmark.config['config']['observations']):
                         benchmark.observe()
                 else:
                     max_n, max_byte_size = parse_maxsize(args.maxsize)
                     with esbench.data.feed(path=args.data) as feed:
-                        batches = esbench.data.batches_iterator(lines=feed, batch_count=args.observations, max_n=max_n, max_byte_size=max_byte_size)
+                        batches = esbench.data.batches_iterator(lines=feed, batch_count=benchmark.config['config']['observations'], max_n=max_n, max_byte_size=max_byte_size)
                         benchmark.run(batches)
 
                 benchmark.record()

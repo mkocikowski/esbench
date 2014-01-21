@@ -118,19 +118,13 @@ class Observation(object):
     def __init__(
             self,
             conn=None,
-            stats_index_name=None,
             benchmark_id=None,
             queries=None,
-            reps=None,
-            doc_index_name=None,
-            doctype=None, ):
+            reps=None, ):
 
         self.conn = conn
-        self.stats_index_name = stats_index_name
         self.benchmark_id = benchmark_id
         self.reps = reps # how many times each query will be executed
-        self.doc_index_name = doc_index_name
-        self.doctype = doctype
 
         Observation._count += 1
         self.observation_sequence_no = Observation._count
@@ -139,7 +133,7 @@ class Observation(object):
         self.queries = []
         for name, body in queries.items():
             self.queries.append(
-                SearchQuery(name, body, self.observation_id, self.doc_index_name, self.doctype)
+                SearchQuery(name, body, self.observation_id, esbench.TEST_INDEX_NAME, esbench.TEST_DOCTYPE_NAME)
             )
 
         self.ts_start = None
@@ -181,15 +175,15 @@ class Observation(object):
 
         """
 
-        resp = segments_f(self.conn, self.doc_index_name)
+        resp = segments_f(self.conn, esbench.TEST_INDEX_NAME)
         _s = json.loads(resp.data)
 
         segments = {
-            "num_search_segments": sum([s['num_search_segments'] for shard in _s['indices'][self.doc_index_name]['shards'].values() for s in shard]),
-            "num_committed_segments": sum([s['num_committed_segments'] for shard in _s['indices'][self.doc_index_name]['shards'].values() for s in shard]),
+            "num_search_segments": sum([s['num_search_segments'] for shard in _s['indices'][esbench.TEST_INDEX_NAME]['shards'].values() for s in shard]),
+            "num_committed_segments": sum([s['num_committed_segments'] for shard in _s['indices'][esbench.TEST_INDEX_NAME]['shards'].values() for s in shard]),
             "t_optimize": "%.2fs" % (self.t_optimize, ),
             "t_optimize_in_millis": int(self.t_optimize * 1000),
-            "shards": sum([len(shard) for shard in _s['indices'][self.doc_index_name]['shards'].values()]),
+            "shards": sum([len(shard) for shard in _s['indices'][esbench.TEST_INDEX_NAME]['shards'].values()]),
         }
 
         return segments
@@ -208,12 +202,12 @@ class Observation(object):
 
         # we need to specifically ask for the stats groups we want, by name.
         stats_group_names = [q.stats_group_name for q in self.queries]
-        resp = stats_f(self.conn, self.doc_index_name, ",".join(stats_group_names))
+        resp = stats_f(self.conn, esbench.TEST_INDEX_NAME, ",".join(stats_group_names))
         logger.debug("stats call: %s", resp.curl)
         try:
-            stats = json.loads(resp.data)['indices'][self.doc_index_name]['primaries']
+            stats = json.loads(resp.data)['indices'][esbench.TEST_INDEX_NAME]['primaries']
         except KeyError: # compatibility with 19.9
-            stats = json.loads(resp.data)['_all']['indices'][self.doc_index_name]['primaries']
+            stats = json.loads(resp.data)['_all']['indices'][esbench.TEST_INDEX_NAME]['primaries']
 
         def _remove_obs_id(s):
             return "_".join(s.split("_")[1:])
@@ -285,7 +279,7 @@ class Observation(object):
         }
 
         data = json.dumps(obs, sort_keys=True)
-        path = '%s/obs/%s' % (self.stats_index_name, self.observation_id, )
+        path = '%s/obs/%s' % (esbench.STATS_INDEX_NAME, self.observation_id, )
         resp = self.conn.put(path, data)
         if resp.status not in [200, 201]:
             logger.error(resp)
@@ -293,10 +287,11 @@ class Observation(object):
         return resp
 
 
+
 class Benchmark(object):
     """Orchestrates the loading of data and running of observations. """
 
-    def __init__(self, argv=None, conn=None, stats_index_name=None):
+    def __init__(self, argv=None, conn=None):
 
         self.benchmark_id = uuid()
         self.argv = argv
@@ -310,10 +305,17 @@ class Benchmark(object):
             self.config['index']['settings']['index']['number_of_shards'] = argv.shards
             logger.debug("overrode default shard setting with command line value: %i", argv.shards)
 
-        self.doc_index_name = self.config['config']['name_index']
-        self.doctype = self.config['config']['name_doctype']
+        if argv.segments:
+            self.config['config']['segments'] = argv.segments
+            logger.debug("overrode default segments setting with command line value: %i", argv.segments)
 
-        self.stats_index_name = stats_index_name
+        if argv.observations:
+            self.config['config']['observations'] = argv.observations
+            logger.debug("overrode default observations setting with command line value: %i", argv.observations)
+
+        if argv.reps:
+            self.config['config']['reps'] = argv.reps
+            logger.debug("overrode default reps setting with command line value: %i", argv.reps)
 
         self.ts_start = None
         self.ts_stop = None
@@ -329,18 +331,15 @@ class Benchmark(object):
 
         observation = obs_cls(
                         conn=self.conn,
-                        stats_index_name=self.stats_index_name,
                         benchmark_id=self.benchmark_id,
                         queries=self.config['queries'],
-                        reps=self.argv.repetitions,
-                        doc_index_name=self.doc_index_name,
-                        doctype=self.doctype,
+                        reps=self.config['config']['reps'],
         )
 
-        if not self.argv.no_optimize_calls:
+        if self.config['config']['segments']:
             t1 = time.time()
             logger.info("starting optimize call...")
-            resp = esbench.api.index_optimize(self.conn, self.doc_index_name, self.argv.segments)
+            resp = esbench.api.index_optimize(self.conn, esbench.TEST_INDEX_NAME, self.config['config']['segments'])
             observation.t_optimize = time.time() - t1
             logger.info("optimize call: %.2fs", observation.t_optimize)
 
@@ -363,20 +362,20 @@ class Benchmark(object):
         logger.debug("begining data load...")
         for line in lines:
             size_b += len(line)
-            resp = esbench.api.document_post(self.conn, self.doc_index_name, self.doctype, line)
+            resp = esbench.api.document_post(self.conn, esbench.TEST_INDEX_NAME, esbench.TEST_DOCTYPE_NAME, line)
             count += 1
-        logger.info("loaded %i lines into index '%s', size: %i (%.2fMB)", count, self.doc_index_name, size_b, size_b/(1<<20))
+        logger.info("loaded %i lines into index '%s', size: %i (%.2fMB)", count, esbench.TEST_INDEX_NAME, size_b, size_b/(1<<20))
         return (count, size_b)
 
 
     def run(self, batches):
 
         index_settings = {"settings" : {"index" : {"number_of_shards" : 1, "number_of_replicas" : 0}}}
-        esbench.api.index_create(self.conn, self.stats_index_name, index_settings)
+        esbench.api.index_create(self.conn, esbench.STATS_INDEX_NAME, index_settings)
 
         if not self.argv.append:
-            esbench.api.index_delete(self.conn, self.doc_index_name)
-            esbench.api.index_create(self.conn, self.doc_index_name, self.config['index'])
+            esbench.api.index_delete(self.conn, esbench.TEST_INDEX_NAME)
+            esbench.api.index_create(self.conn, esbench.TEST_INDEX_NAME, self.config['index'])
 
         total_count = 0
         total_size_b = 0
@@ -388,7 +387,7 @@ class Benchmark(object):
             total_size_b += size_b
             self.observe()
 
-        logger.info("load complete; loaded total %i lines into index '%s', total size: %i (%.2fmb)", total_count, self.doc_index_name, total_size_b, total_size_b/(1<<20))
+        logger.info("load complete; loaded total %i lines into index '%s', total size: %i (%.2fmb)", total_count, esbench.TEST_INDEX_NAME, total_size_b, total_size_b/(1<<20))
 
 
     def _get_cluster_info(self, cluster_f=esbench.api.cluster_get_info):
@@ -426,7 +425,7 @@ class Benchmark(object):
         }
 
         data = json.dumps(stat, sort_keys=True)
-        path = '%s/bench/%s' % (self.stats_index_name, self,)
+        path = '%s/bench/%s' % (esbench.STATS_INDEX_NAME, self,)
         resp = self.conn.put(path, data)
         if resp.status not in [200, 201]:
             raise IOError("failed to record benchmark")

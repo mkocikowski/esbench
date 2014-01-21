@@ -64,12 +64,9 @@ class ObservationTest(unittest.TestCase):
         self.conn = esbench.api.Conn(conn_cls=esbench.test.test_api.MockHTTPConnection)
         self.observation = esbench.bench.Observation(
                         conn = self.conn,
-                        stats_index_name = 'stats',
                         benchmark_id = 'bench1',
                         queries = self.queries,
                         reps = 10,
-                        doc_index_name = 'esbench_test',
-                        doctype = 'doc',
         )
 
 
@@ -148,7 +145,7 @@ class BenchmarkTest(unittest.TestCase):
 
     def setUp(self):
         self.conn = esbench.api.Conn(conn_cls=esbench.test.test_api.MockHTTPConnection)
-        self.argv = esbench.client.args_parser().parse_args("run".split())
+        self.argv = esbench.client.args_parser().parse_args("run --observations 20".split())
         self.bench = esbench.bench.Benchmark(self.argv, self.conn)
 
 
@@ -181,7 +178,7 @@ class BenchmarkTest(unittest.TestCase):
         self.bench.observe = _obs
         self.bench.run(batches)
         self.assertEqual(len(self.conn.conn.requests), 103)
-        self.assertEqual(self.conn.conn.requests[:4], [('PUT', "/", '{"settings": {"index": {"number_of_replicas": 0, "number_of_shards": 1}}}'), ('DELETE', u'/esbench_test', None), ('PUT', u'/esbench_test', '{"mappings": {"doc": {"_size": {"enabled": true, "store": "yes"}, "properties": {"abstract": {"type": "string", "store": "yes"}}, "_source": {"enabled": true}}}, "settings": {"index": {"number_of_replicas": 0, "number_of_shards": 1}}}'), ('POST', u'/esbench_test/doc', 'line_00')])
+        self.assertEqual(self.conn.conn.requests[:4], [('PUT', "/esbench_stats", '{"settings": {"index": {"number_of_replicas": 0, "number_of_shards": 1}}}'), ('DELETE', '/esbench_test', None), ('PUT', '/esbench_test', '{"mappings": {"doc": {"_size": {"enabled": true, "store": "yes"}, "properties": {"abstract": {"type": "string", "store": "yes"}}, "_source": {"enabled": true}}}, "settings": {"index": {"number_of_replicas": 0, "number_of_shards": 1}}}'), ('POST', '/esbench_test/doc', 'line_00')])
         self.assertEqual(self.obs_count, 10)
 
         self.obs_count = 0
@@ -193,7 +190,7 @@ class BenchmarkTest(unittest.TestCase):
         self.bench.observe = _obs
         self.bench.run(batches)
         self.assertEqual(len(self.conn.conn.requests), 101)
-        self.assertEqual(self.conn.conn.requests[:4], [('PUT', "/", '{"settings": {"index": {"number_of_replicas": 0, "number_of_shards": 1}}}'), ('POST', u'/esbench_test/doc', 'line_00'), ('POST', u'/esbench_test/doc', 'line_01'), ('POST', u'/esbench_test/doc', 'line_02')])
+        self.assertEqual(self.conn.conn.requests[:4], [('PUT', "/esbench_stats", '{"settings": {"index": {"number_of_replicas": 0, "number_of_shards": 1}}}'), ('POST', '/esbench_test/doc', 'line_00'), ('POST', '/esbench_test/doc', 'line_01'), ('POST', '/esbench_test/doc', 'line_02')])
         self.assertEqual(self.obs_count, 10)
 
         self.obs_count = 0
@@ -205,14 +202,14 @@ class BenchmarkTest(unittest.TestCase):
         self.bench.observe = _obs
         self.bench.run(batches)
         self.assertEqual(len(self.conn.conn.requests), 101)
-        self.assertEqual(self.conn.conn.requests[:4], [('PUT', "/", '{"settings": {"index": {"number_of_replicas": 0, "number_of_shards": 1}}}'), ('POST', u'/esbench_test/doc', 'line_00'), ('POST', u'/esbench_test/doc', 'line_01'), ('POST', u'/esbench_test/doc', 'line_02')])
+        self.assertEqual(self.conn.conn.requests[:4], [('PUT', "/esbench_stats", '{"settings": {"index": {"number_of_replicas": 0, "number_of_shards": 1}}}'), ('POST', '/esbench_test/doc', 'line_00'), ('POST', '/esbench_test/doc', 'line_01'), ('POST', '/esbench_test/doc', 'line_02')])
         self.assertEqual(self.obs_count, 5)
 
 
     def test_observe(self):
+        self.bench.config['config']['segments'] = 10
         obs = self.bench.observe(obs_cls=MockObservation)
-#         self.assertFalse(obs.record_segment_stats) # make sure record_segment_stats is initialized as False by bench.observe() by default
-        self.assertEqual(self.conn.conn.requests, [('POST', u'/esbench_test/_optimize?refresh=true&flush=true&wait_for_merge=true', None)])
+        self.assertEqual(self.conn.conn.requests, [('POST', '/esbench_test/_optimize?max_num_segments=10&refresh=true&flush=true&wait_for_merge=true', None)])
         self.assertTrue(obs.did_run)
         self.assertTrue(obs.did_record)
 

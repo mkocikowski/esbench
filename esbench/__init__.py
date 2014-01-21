@@ -5,4 +5,5 @@
 __version__ = "0.2.1"
 
 STATS_INDEX_NAME = 'esbench_stats'
-
+TEST_INDEX_NAME = 'esbench_test'
+TEST_DOCTYPE_NAME = 'doc'
