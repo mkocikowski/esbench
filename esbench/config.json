@@ -84,7 +84,8 @@
     "config": {
         "observations": 10, 
         "segments": null, 
-        "reps": 100
+        "reps": 100, 
+        "append": false
     } 
     
 }

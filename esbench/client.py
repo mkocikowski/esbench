@@ -10,6 +10,7 @@ import contextlib
 import sys
 import os.path
 import socket
+import json
 
 import esbench.api
 import esbench.analyze
@@ -101,30 +102,64 @@ def parse_maxsize(value):
     return max_n, max_byte_size
 
 
+def load_config(path):
+
+    c = None
+    with open(path, 'rU') as f:
+        c = json.loads(f.read())
+
+    return c
+
+
+def merge_config(argv, config):
+    """Merge the config file with the command line arguments.
+
+    Command line arguments override the config file parameters, unless they
+    are None. If a command line argument exists which isn't defined in the
+    'config' element of the config, it gets set regradless of its value (this
+    includes None).
+
+    """
+
+    c = config['config']
+    for k, v in argv.__dict__.items():
+        if k in c and v is not None:
+            c[k] = v
+        elif k not in c:
+            c[k] = v
+
+    c['max_n'], c['max_byte_size'] = parse_maxsize(c['maxsize'])
+
+    if argv.shards:
+        config['index']['settings']['index']['number_of_shards'] = argv.shards
+
+    return config
+
+
 def main():
 
     args = args_parser().parse_args()
-    cmnd = " ".join(sys.argv[1:])
 
-    if args.verbose:
-        logging.basicConfig(level=logging.DEBUG, format='%(asctime)s %(process)d %(name)s.%(funcName)s:%(lineno)d %(levelname)s %(message)s')
-    else:
-        logging.basicConfig(level=logging.INFO)
+    if args.verbose: logging.basicConfig(
+        level=logging.DEBUG,
+        format='%(asctime)s %(process)d %(name)s.%(funcName)s:%(lineno)d %(levelname)s %(message)s')
+    else: logging.basicConfig(level=logging.INFO)
 
     with esbench.api.connect(host=args.host, port=args.port) as conn:
 
         try:
 
             if args.command == 'run':
-                benchmark = esbench.bench.Benchmark(argv=args, conn=conn)
+
+                config = merge_config(args, load_config(args.config_file_path))
+                benchmark = esbench.bench.Benchmark(config=config, conn=conn)
                 benchmark.prepare()
-                if args.no_load:
-                    for _ in range(benchmark.config['config']['observations']):
+                if config['config']['no_load']:
+                    for _ in range(config['config']['observations']):
                         benchmark.observe()
                 else:
-                    max_n, max_byte_size = parse_maxsize(args.maxsize)
-                    with esbench.data.feed(path=args.data) as feed:
-                        batches = esbench.data.batches_iterator(lines=feed, batch_count=benchmark.config['config']['observations'], max_n=max_n, max_byte_size=max_byte_size)
+                    with esbench.data.feed(path=config['config']['data']) as feed:
+                        batches = esbench.data.batches_iterator(lines=feed, batch_count=config['config']['observations'], max_n=config['config']['max_n'], max_byte_size=config['config']['max_byte_size'])
                         benchmark.run(batches)
 
                 benchmark.record()
@@ -133,7 +168,7 @@ def main():
                 esbench.analyze.show_benchmarks(conn=conn, benchmark_ids=args.ids, fields=args.fields, fmt=args.format, fh=sys.stdout)
 
             elif args.command == 'dump':
-                esbench.analyze.dump_benchmarks(conn, args.ids)
+                esbench.analyze.dump_benchmarks(conn=conn, benchmark_ids=args.ids)
 
         except Exception as exc:
             logger.error(exc, exc_info=True)

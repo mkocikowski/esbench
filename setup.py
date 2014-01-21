@@ -37,7 +37,7 @@ github page.
 
 setup(
     name = 'esbench',
-    version = '0.2.1',
+    version = '0.2.2',
     author = 'Mik Kocikowski',
     author_email = 'mkocikowski@gmail.com',
     url = 'https://github.com/mkocikowski/esbench',
@@ -69,3 +69,4 @@ setup(
     license = 'MIT',
     test_suite = "esbench.test.units.suite",
 )
+

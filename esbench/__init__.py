@@ -2,7 +2,7 @@
 # (c)2013 Mik Kocikowski, MIT License (http://opensource.org/licenses/MIT)
 # https://github.com/mkocikowski/esbench
 
-__version__ = "0.2.1"
+__version__ = "0.2.2"
 
 STATS_INDEX_NAME = 'esbench_stats'
 TEST_INDEX_NAME = 'esbench_test'

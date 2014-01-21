@@ -11,6 +11,9 @@ import types
 import collections
 import sys
 import StringIO
+import tempfile
+import time
+import copy
 
 import esbench.client
 
@@ -24,6 +27,7 @@ class ClientTest(unittest.TestCase):
 
     def tearDown(self):
         sys.stdout = self.tmp
+
 
     def test_args_run(self):
 
@@ -72,13 +76,94 @@ class ClientTest(unittest.TestCase):
         self.assertRaises(SystemExit, parser.parse_args, "show -h".split())
 
 
-
     def test_parse_maxsize(self):
 
         self.assertRaises(AttributeError, esbench.client.parse_maxsize, (10,))
         self.assertEqual((10, 0), esbench.client.parse_maxsize('10'))
         self.assertEqual((0, 1<<10), esbench.client.parse_maxsize('1kb'))
         self.assertEqual((0, 1<<20), esbench.client.parse_maxsize('1mb'))
+
+
+class TestConfig(unittest.TestCase):
+
+    def setUp(self):
+        self.tf = tempfile.NamedTemporaryFile()
+        self.base_config = {
+            "index": {
+                "settings": {
+                    "index": {
+                        "number_of_replicas": 0,
+                        "number_of_shards": 1,
+                    }
+                }
+            },
+            "config": {
+                "observations": 10,
+                "segments": None,
+                "reps": 100
+            }
+        }
+        self.tf.write(json.dumps(self.base_config))
+        self.tf.flush()
+#         self.argv = esbench.client.args_parser().parse_args("run")
+        self.maxDiff = None
+
+    def tearDown(self):
+        self.tf.close()
+
+    def test_load_config(self):
+        c = esbench.client.load_config(self.tf.name)
+        self.assertEqual(c, self.base_config)
+
+    def test_merge_config(self):
+
+        argv = esbench.client.args_parser().parse_args("run".split())
+        c = esbench.client.merge_config(argv=argv, config=copy.deepcopy(self.base_config))
+        c['config']['name'] = None # need to clear it as it is a timestamp, will fail tests, changes at every test run
+        self.assertEqual(c, {
+                'index': {
+                    'settings': {
+                        'index': {
+                            'number_of_replicas': 0,
+                            'number_of_shards': 1
+                        }
+                    }
+                },
+                'config': {
+                    'verbose': False,
+                    'segments': None,
+                    'reps': 100,
+                    'shards': None,
+                    'maxsize': '1mb',
+                    'no_load': False,
+                    'command': 'run',
+                    'observations': 10,
+                    'host': 'localhost',
+                    'config_file_path': '/Users/z013rqg/dev/esbench/esbench/config.json',
+                    'data': None,
+                    'port': 9200,
+                    'append': False,
+                    'name': None,
+                    'max_byte_size': 1048576,
+                    'max_n': 0
+                }
+            }
+        )
+
+        argv = esbench.client.args_parser().parse_args("run --observations 100 --shards 2 100mb".split())
+        c = esbench.client.merge_config(argv=argv, config=copy.deepcopy(self.base_config))
+        self.assertEqual(c['config']['observations'], 100)
+        self.assertEqual(c['config']['shards'], 2)
+        self.assertEqual(c['index']['settings']['index']['number_of_shards'], 2)
+        self.assertEqual(c['config']['maxsize'], '100mb')
+        self.assertEqual(c['config']['max_byte_size'], 104857600)
+        self.assertEqual(c['config']['max_n'], 0)
+
+        argv = esbench.client.args_parser().parse_args("run --observations 100 --no-load --shards 2 100".split())
+        c = esbench.client.merge_config(argv=argv, config=copy.deepcopy(self.base_config))
+        self.assertEqual(c['config']['max_byte_size'], 0)
+        self.assertEqual(c['config']['max_n'], 100)
+        self.assertEqual(c['config']['no_load'], True)
 
 
 if __name__ == "__main__":

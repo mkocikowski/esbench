@@ -218,6 +218,7 @@ class Observation(object):
         }
 
         for query in self.queries:
+            logger.debug("query %s execution count: %i", query.name, query.execution_count)
             stats['search']['groups'][query.name]['client_total'] = query.execution_count
             stats['search']['groups'][query.name]['client_time'] = "%.2fs" % (query.t_client, ) if query.t_client else None
             stats['search']['groups'][query.name]['client_time_in_millis'] = int(query.t_client * 1000.0) if query.t_client else None
@@ -291,31 +292,12 @@ class Observation(object):
 class Benchmark(object):
     """Orchestrates the loading of data and running of observations. """
 
-    def __init__(self, argv=None, conn=None):
+    def __init__(self, config=None, conn=None):
 
         self.benchmark_id = uuid()
-        self.argv = argv
+
+        self.config = config
         self.conn = conn
-
-        self.config = None
-        with open(argv.config_file_path, 'rU') as f:
-            self.config = json.loads(f.read())
-
-        if argv.shards:
-            self.config['index']['settings']['index']['number_of_shards'] = argv.shards
-            logger.debug("overrode default shard setting with command line value: %i", argv.shards)
-
-        if argv.segments:
-            self.config['config']['segments'] = argv.segments
-            logger.debug("overrode default segments setting with command line value: %i", argv.segments)
-
-        if argv.observations:
-            self.config['config']['observations'] = argv.observations
-            logger.debug("overrode default observations setting with command line value: %i", argv.observations)
-
-        if argv.reps:
-            self.config['config']['reps'] = argv.reps
-            logger.debug("overrode default reps setting with command line value: %i", argv.reps)
 
         self.ts_start = None
         self.ts_stop = None
@@ -373,7 +355,7 @@ class Benchmark(object):
         index_settings = {"settings" : {"index" : {"number_of_shards" : 1, "number_of_replicas" : 0}}}
         esbench.api.index_create(self.conn, esbench.STATS_INDEX_NAME, index_settings)
 
-        if not self.argv.append:
+        if not self.config['config']['append']:
             esbench.api.index_delete(self.conn, esbench.TEST_INDEX_NAME)
             esbench.api.index_create(self.conn, esbench.TEST_INDEX_NAME, self.config['index'])
 
@@ -412,12 +394,11 @@ class Benchmark(object):
         stat = {
             'meta': {
                 'benchmark_id': self.benchmark_id,
-                'benchmark_name': self.argv.name,
+                'benchmark_name': self.config['config']['name'],
                 'benchmark_start': self.ts_start,
                 'benchmark_stop': self.ts_stop,
                 't_total': "%.2fm" % (self.t_total / 60.0),
                 't_total_in_millis': int(self.t_total * 1000),
-                'argv': self.argv.__dict__,
                 'config': json.dumps(self.config, sort_keys=True),
             },
 
