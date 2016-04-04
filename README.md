@@ -1,3 +1,7 @@
+OBSOLETE / deprecated / decrepit?
+--------
+Hi, I am no longer supporting this. Leaving the code for reference, but will be removing the supporting s3 data, as I don't want to pay the transfer fees any more. **This code is old and I have no idea if it even runs on modern ES!** I suggest that for benchmarking you put a load on your system while monitoring with Marvel. I consult / optimize ES clusters for a living, so if you have a problem, get in touch (via issues). Also, come over to [our ES meetup](http://www.meetup.com/Elasticsearch-San-Francisco/)! Have a great day, Mik. 
+
 Elasticsearch benchmarking tools
 --------------------------------
 'esbench' is a set of python 2.7 scripts for benchmarking Elasticsearch. The
